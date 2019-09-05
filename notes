@@ -1,0 +1,71 @@
+* coroutines = générateurs
+* types.coroutine transforme une fonction génératrice en coroutine
+* le moteur asynchrone ne fait qu'itérer (=donner la main) à la coroutine jusqu'à la prochaine interruption (await=yield/yield from)
+* Lors d'une interruption, le moteur reprend la main et peut choisir quelle coroutine réveiller
+* Le moteur n'a pas la possibilité de suspendre une coroutine
+* asyncio n'est qu'un moteur qui fournit la boucle évenementielle et quelques outils (tasks, futures) / libs 
+
+* Une coroutine est en fait un objet spécial qui possède une méthode __await__()
+      s/coroutine/awaitable/ ? Ou tâche ?
+* Cette méthode doit renvoyer un itérateur*
+
+* `async def`: fonction qui renvoie une tâche asynchrone (une coroutine)
+    * Cette tâche doit être attendue avec un `await`
+
+* Exemples d'itérations manuelles sur une coroutine définie avec `async for` et faisant appel à release
+
+```
+>>> async def toto():
+...     print(1)
+...     await release()
+...     print(2)
+...     await release()
+...     print(3)
+... 
+>>> aw = toto(); gen = aw.__await__()
+>>> next(gen)
+1
+>>> next(gen)
+2
+>>> next(gen)
+3
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+StopIteration
+```
+
+* Transformer ce code en classe de boucle évenementielle
+* Les sous-tâches ne sont pas visibles au niveau de la boucle, qui ne voit que la tâche principale suspendue (de la même manière que les générateurs avec yield from)
+    * Bien qu'asyncio renvoie des futures par les générateurs, pour demander à la boucle de les traiter avant de rentre la main à la tâche
+        Exemple d'asyncio.sleep:
+            def __await__(self): return it([future])
+    * Les valeurs de retour du générateur __await__ peuvent donc avoir un intérêt
+
+```
+>>> async def toto():
+...     print(1)
+...     await asyncio.sleep(1)
+...     print(2)
+... 
+>>> aw = toto()
+>>> gen = aw.__await__()
+>>> future = next(gen)
+1
+>>> future.set_result(None) # loop will wait 1s before calling this
+>>> next(gen) # only call when result is done (has a value)
+2
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+StopIteration
+```
+
+* Exemple : Sockets asynchrone (poll + coroutines qui release tant que le fd n'est pas prêt)
+
+* Itérables asynchrones (__aiter__/__anext__) + générateurs (async for + yield)
+    * Détailler quelles méthodes sont appelées sur quels objets lors de l'itération sur un itérable asynchrone:
+        aobj.__aiter__ -> ait # Récupération de l'itérateur
+        ait.__anext__ -> aw # Prochain élément de l'itérateur (en boucle)
+        aw.__await__ -> gen # Générateur associé à la tâche
+        gen.__iter__ -> it # Itérateur sur le générateur de la tâche
+        it.__next__ -> None # Itération par la boucle événementielle
+* Gestionnaires de contextes asynchrones (__aenter__/__aexit__)
