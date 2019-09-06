@@ -69,3 +69,10 @@ StopIteration
         gen.__iter__ -> it # Itérateur sur le générateur de la tâche
         it.__next__ -> None # Itération par la boucle événementielle
 * Gestionnaires de contextes asynchrones (__aenter__/__aexit__)
+
+-------
+
+Inverser: commencer par ce qui est connu (définition de coroutines et utilisation de boucles asyncio) pour aller petit à petit vers la définition de tâche asynchrone et de boucle événementielle de façon à remplacer asyncio.
+-> Montrer qu'une coroutine n'est qu'un objet spécial avec une méthode `__await__`, itérer sur le retour de cette méthode, etc. (avec des print pendant l'itération pour montrer les interruptions)
+
+Puis aller plus loin en présentant des alternatives aux libs asyncio (sleep, sockets)
