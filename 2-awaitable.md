@@ -4,6 +4,10 @@
 * Implémentation d'awaitables simples (release + producers)
 * Itération sur une tâche asynchrone (`for _ in aw.__await__(): ...`)
 * Liaison avec les générateurs (utilisation d'un `yield from` dans une méthode `__await__`)
+* Coroutine utilisant notre awaitable release
+* Coroutines et futures: await asyncio.sleep (traiter le résultat manuellement)
+
+Les coroutines sont un cas particulier d'_awaitable_, définies à l'aide des mots-clés `async def`.
 
 Une tâche asynchrone est appelée un _awaitable_, c'est à dire un objet que l'on peut attendre avec le mot-clé `await` ou exécuter dans une boucle évenementielle.
 
@@ -64,3 +68,14 @@ C'est d'ailleurs tout le principe de ces tâches : les `yield` servent d'interr
 
 Les _awaitables_ ne sont alors que des sortes de générateurs, gérés par le moteur asynchrone.
 Le mot-clé `await` est d'ailleurs équivalent du `yield from` dans le contexte des tâches asynchrones.
+
+---
+
+* Define an equivalent of previous coroutine (print messages and yield)
+* Show that it has the same behaviour in asyncio loops & for
+* Awaitable = tâche asynchrone
+
+* Show that we can use or new object in an `await` expression
+* Example with `yield from aw.__await__()` to show messages from `simple_print` coroutine
+
+* `asyncio.sleep` with arg>0 that returns a future (handle manually the result to continue the iteration)

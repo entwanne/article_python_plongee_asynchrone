@@ -1,13 +1,8 @@
-Les coroutines sont un cas particulier d'_awaitable_, définies à l'aide des mots-clés `async def`.
-
 * Création d'une première coroutine
+* Lancement dans une boucle asyncio
 * Itération sur le générateur associé à une coroutine (__await__ + boucle for)
-
-* Coroutine utilisant notre awaitable release
 * Coroutines imbriquées
 * Itération manuelle (__await__ + next())
-
-* Coroutines et futures: await asyncio.sleep (traiter le résultat manuellement)
 
 ```python
 async def my_coro():
@@ -48,3 +43,12 @@ class release:
         yield
 ```
 
+---
+
+* Define coroutine with simple print (`async def simple_print(msg)`)
+* + coroutine with multiple `await asyncio.sleep(0)` and await the previous one
+
+* Run with `asyncio.run`
+* Run with `loop.run_until_complete` (= asyncio.run sans les opérations de finalisation)
+* Run with `for _ in aw.__await__(): print('interrupt')`
+* Run manually: `gen = aw.__await__(); next(gen); ...`
