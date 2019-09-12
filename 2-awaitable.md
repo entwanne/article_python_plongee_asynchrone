@@ -7,68 +7,6 @@
 * Coroutine utilisant notre awaitable release
 * Coroutines et futures: await asyncio.sleep (traiter le résultat manuellement)
 
-Les coroutines sont un cas particulier d'_awaitable_, définies à l'aide des mots-clés `async def`.
-
-Une tâche asynchrone est appelée un _awaitable_, c'est à dire un objet que l'on peut attendre avec le mot-clé `await` ou exécuter dans une boucle évenementielle.
-
-Un objet est dit _awaitable_ s'il possède une méthode `__await__` renvoyant un itérateur.
-Les instances de la classe `AsyncTask` suivante sont ainsi des tâches asynchrones :
-
-```python
-class AsyncTask:
-    def __await__(self):
-        return iter([])
-```
-
-Ou plus simplement, les générateurs étant des itérateurs :
-
-```python
-class AsyncTask:
-    def __await__(self):
-        yield
-```
-
-On peut voir que notre tâche s'exécute correctement dans une boucle `asyncio`.
-
-```python
->>> import asyncio
->>> loop = asyncio.get_event_loop()
->>> loop.run_until_complete(AsyncTask())
-```
-
-Bon ce n'est pas très parlant ici parce que notre tâche ne fait rien, essayons avec une autre.
-
-```python
-class ProducerTask:
-    def __await__(self):
-        print('Hello')
-        yield
-        print('World!')
-```
-
-Et maintenant :
-
-```python
->>> loop.run_until_complete(ProducerTask())
-Hello
-World!
-```
-
-La boucle `asyncio` déroule donc notre itérateur comme nous aurions pu le faire avec une boucle `for`.
-
-```python
->>> for _ in ProducerTask().__await__():
-...     pass
-... 
-Hello
-World!
-```
-
-C'est d'ailleurs tout le principe de ces tâches : les `yield` servent d'interruptions pour rendre la main au moteur asynchrone qui peut alors se permettre de cadencer les différentes tâches tout en gérant les événements extérieurs.
-
-Les _awaitables_ ne sont alors que des sortes de générateurs, gérés par le moteur asynchrone.
-Le mot-clé `await` est d'ailleurs équivalent du `yield from` dans le contexte des tâches asynchrones.
-
 ---
 
 * Define an equivalent of previous coroutine (print messages and yield)
@@ -79,3 +17,41 @@ Le mot-clé `await` est d'ailleurs équivalent du `yield from` dans le contexte 
 * Example with `yield from aw.__await__()` to show messages from `simple_print` coroutine
 
 * `asyncio.sleep` with arg>0 that returns a future (handle manually the result to continue the iteration)
+
+On a vu que les coroutines pouvaient s'utiliser dans des boucles événementielles ou derrière le mot-clé *await*, mais d'autres objets en sont aussi capables.
+On parle plus généralement de tâches asynchrones ou d'*awaitables*.
+
+Un *awaitable* est un objet qui possède une méthode spéciale `__await__`, renvoyant un itérateur.
+
+Voici par exemple un équivalent de notre fonction `complex_work`.
+
+```python
+class ComplexWork:
+    def __await__(self):
+        print('Hello')
+        yield
+        print('World')
+```
+
+Avec le mot-clé `yield`, notre méthode `__await__` devient une fonction génératrice et renvoie donc un itérateur.
+
+Nous pouvons exécuter notre tâche asynchrone dans une boucle évenementielle `asyncio` :
+
+```python
+>>> loop.run_until_complete(ComplexWork())
+Hello
+World
+```
+
+Ou via une itération manuelle comme précédemment :
+
+```python
+>>> it = ComplexWork().__await__()
+>>> next(it)
+Hello
+>>> next(it)
+World
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+StopIteration
+```

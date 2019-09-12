@@ -9,7 +9,7 @@
 * Socket: client + serveur
 
 * Notion de priorisation des tâches
-* Rappel sur les futures
+* Rappel sur les futures (consacrer une partie complète ?)
 
 Une boucle événementielle est globalement équivalente aux boucles for que nous avons réalisées.
 
