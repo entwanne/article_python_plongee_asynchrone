@@ -1,4 +1,4 @@
-Depuis Python 3.5, une coroutine se définit à l'aide du mot-clé `async def` :
+Depuis Python 3.5, une coroutine se définit à l'aide des mots-clés `async def` :
 
 ```python
 async def simple_print(msg):
@@ -23,7 +23,7 @@ Hello
 ```
 
 Derrière cette simple ligne, `asyncio` se charge d'instancier une nouvelle boucle événementielle, de démarrer notre coroutine et d'attendre que celle-ci se termine.
-Si l'on omet les opérations de finalisation qu'ajoutent `asyncio.run`, le code précédent est équivalent à :
+Si l'on omet les opérations de finalisation qu'ajoute `asyncio.run`, le code précédent est équivalent à :
 
 ```python
 >>> loop = asyncio.new_event_loop()
@@ -31,11 +31,26 @@ Si l'on omet les opérations de finalisation qu'ajoutent `asyncio.run`, le code 
 Hello
 ```
 
+Il s'agit donc d'une boucle événementielle, chargée d'exécuter et de cadencer les différentes tâches, pour permettre une utilisation concurrente.
+
 Mais que fait donc ce `run_until_complete` pour exécuter notre code, et à quoi au juste correspond une coroutine ?
 En inspectant l'objet renvoyé par `simple_print`, on remarque qu'il possède une méthode `__await__`.
-Cette méthode renvoie un itérateur qui est alors parcouru par la boucle événementielle.
+Mais aussi que l'appel à cette méthode renvoie un itérateur.
 
-Cela signifie que l'on peut donc traiter nos coroutines en itérant manuellement dessus.
+```python
+>>> coro = simple_print('Hello')
+>>> dir(coro)
+['__await__', ..., 'close', 'cr_await', 'cr_code', 'cr_frame', 'cr_origin', 'cr_running', 'send', 'throw']
+>>> aw = coro.__await__()
+>>> aw
+<coroutine_wrapper object at 0x7fcde8f30710>
+>>> dir(aw)
+[..., '__iter__', ..., '__next__', ..., 'close', 'send', 'throw']
+```
+
+C'est en fait cet itérateur spécial qui est ensuite parcouru par la boucle événementielle.
+
+Cela signifie que l'on pourrait donc traiter nos coroutines en itérant manuellement dessus.
 
 ```python
 >>> for _ in simple_print('Hello').__await__():

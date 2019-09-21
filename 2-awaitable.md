@@ -1,5 +1,5 @@
 On a vu que les coroutines pouvaient s'utiliser dans des boucles événementielles ou derrière le mot-clé *await*, mais d'autres objets en sont aussi capables.
-On parle plus généralement de tâches asynchrones ou d'*awaitables*.
+On parle ainsi plus généralement de tâches asynchrones ou d'*awaitables*.
 
 Un *awaitable* est un objet qui possède une méthode spéciale `__await__`, renvoyant un itérateur.
 
