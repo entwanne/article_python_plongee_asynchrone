@@ -46,3 +46,49 @@ Les exemples montrent ici une utilisation directe de notre tâche, mais nous pou
 Hello
 World
 ```
+
+Il est peu fréquent d'avoir à définir un *awaitable* autre qu'une coroutine, mais cela peut être utile pour toucher aux aspects bas-niveau du moteur asynchrone ou pour associer un état à notre tâche.
+
+```python
+class Waiter:
+    def __init__(self):
+        self.done = False
+
+    def __await__(self):
+        while not self.done:
+            yield
+```
+
+```python
+>>> waiter = Waiter()
+>>>
+>>> async def coro1():
+...     print('start')
+...     await waiter
+...     print('finished')
+...
+>>> async def coro2():
+...     for i in range(10):
+...         print(i)
+...         await asyncio.sleep(1)
+...     waiter.done = True
+...
+>>> loop.run_until_complete(asyncio.gather(coro1(), coro2()))
+start
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+finished
+[None, None]
+```
+
+(`gather` est un utilitaire `asyncio` pour exécuter simultanément plusieurs tâches).
+
+Comme on le voit, notre objet `Waiter` permet à `coro1` d'attendre la fin de l'exécution de `coro2` avant de continuer.

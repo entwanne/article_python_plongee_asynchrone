@@ -2,5 +2,5 @@ Si vous vous êtes déjà intéressé de près aux mécanismes de Python, vous s
 
 Les tâches asynchrones n'échappent pas à cette règle, étant simplement des objets dotés d'une méthode `__await__`.
 
-Cet article présuppose une version de Python ≥ 3.5, intégrant les mot-clés `async` et `await`.
+Cet article présuppose une version de Python supérieure ou égale à 3.5, intégrant les mot-clés `async` et `await`.
 Une connaissance minimale du modèle asynchrone de Python et de la bibliothèque `asyncio` sont préférables.
