@@ -1,3 +1,5 @@
+# Boucles événementielles
+
 * Notion de boucle évenementielle
 * Notion de rendre la main à la boucle (asyncio.sleep(0) = yield)
 * Définition d'un awaitable release
@@ -95,7 +97,8 @@ async def print_messages(*messages, sleep_time=1):
 Voyons maintenant ce que cela peut donner à l'exécution. Je vous laisse essayer de votre côté pour vous rendre compte de la temporisation.
 
 ```python
->>> run_tasks(print_messages('foo', 'bar', 'baz'), print_messages('aaa', 'bbb', 'ccc', sleep_time=0.7))
+>>> run_tasks(print_messages('foo', 'bar', 'baz'),
+...     print_messages('aaa', 'bbb', 'ccc', sleep_time=0.7))
 foo
 aaa
 bbb

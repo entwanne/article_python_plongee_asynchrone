@@ -1,3 +1,5 @@
+# Un monde de coroutines
+
 Depuis Python 3.5, une coroutine se définit à l'aide des mots-clés `async def` :
 
 ```python
@@ -40,7 +42,7 @@ Mais aussi que l'appel à cette méthode renvoie un itérateur.
 ```python
 >>> coro = simple_print('Hello')
 >>> dir(coro)
-['__await__', ..., 'close', 'cr_await', 'cr_code', 'cr_frame', 'cr_origin', 'cr_running', 'send', 'throw']
+['__await__', ...]
 >>> aw = coro.__await__()
 >>> aw
 <coroutine_wrapper object at 0x7fcde8f30710>

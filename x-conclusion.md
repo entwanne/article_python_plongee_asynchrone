@@ -1,2 +1,4 @@
+# Conclusion
+
 Les exemples présentés ici ne prétendent bien sûr pas remplacer asyncio, dont le fonctionnement des boucles est beaucoup plus complexe.
 Ils n'ont qu'un but pédagogique pour présenter ce qu'il est possible de faire, de comprendre comment cela fonctionne et de montrer qu'`async` et `await` ne sont pas intrinséquement liés à `asyncio` (qui est un moteur asynchrone comme un autre, mais intégré à la stdlib).
