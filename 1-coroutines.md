@@ -52,7 +52,7 @@ Mais aussi que l'appel à cette méthode renvoie un itérateur.
 
 C'est en fait cet itérateur spécial qui est ensuite parcouru par la boucle événementielle.
 
-Cela signifie que l'on pourrait donc traiter nos coroutines en itérant manuellement dessus.
+Cela signifie que l'on pourrait donc traiter nos coroutines en itérant manuellement sur l'itérateur qu'elles renvoient.
 
 ```python
 >>> for _ in simple_print('Hello').__await__():
@@ -78,7 +78,7 @@ Hello
 World
 ```
 
-On ne le voit pas ici mais notre boucle parcourt bien plusieurs itérations :
+On ne le voit pas directement ici mais notre boucle parcourt bien plusieurs itérations :
 
 ```python
 >>> it = complex_work().__await__()
@@ -91,6 +91,6 @@ Traceback (most recent call last):
 StopIteration
 ```
 
-C'est en fait le `await asyncio.sleep(0)` qui rend la main à la boucle événementielle (et donc enclanche une nouvelle itération), il est équivalent à un `yield` dans le contexte d'un générateur (là où `await` est plutôt équivalent à un `yield from`).
+C'est en fait le `await asyncio.sleep(0)` qui a pour effet de rendre la main à la boucle événementielle (et donc d'enclancher une nouvelle itération), il est équivalent à un `yield` dans le contexte d'un générateur (mais de manière générale `await` est plutôt équivalent à un `yield from`).
 
 Ainsi, à chacune de ces interruptions, la boucle évenementielle reprend le contrôle et décide de suspendre ou continuer telle ou telle tâche (c'est ce qui lui permet d'en exécuter plusieurs simultanément).

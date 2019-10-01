@@ -12,7 +12,9 @@
 
 * Notion de priorisation des tâches
 
-Avec nos précédents codes nous avons de quoi mettre en place un premier prototype de boucle événementielle, gérant une unique tâche.
+La boucle événementielle est donc l'utilitaire chargé de cadencer et exécuter nos tâches, en tenant compte des événements extérieurs.
+
+Avec nos précédents codes nous avons de quoi mettre en place un premier prototype de boucle événementielle, gérant une unique tâche, sous la forme d'une simple fonction.
 
 ```python
 def run_task(task):
@@ -27,7 +29,10 @@ def run_task(task):
 
 Mais quel intérêt d'utiliser un modèle asynchrone pour n'exécuter qu'une seule tâche ?
 
-L'idée serait alors d'avoir une fonction `run_tasks` recevant une liste de tâche, et les parcourant simultanément, passant à la suivante chaque fois qu'une tâche lui rend la main.
+L'idée serait alors d'avoir une fonction `run_tasks` recevant une liste de tâches, et les parcourant simultanément, passant à la suivante chaque fois qu'une tâche lui rend la main.
+
+Nous pouvons pour cela procéder avec une file de tâches, en sortant une tâche à chaque itération pour la faire avancer d'un pas, et l'ajouter à nouveau à la file si elle n'est pas terminée.
+La file permet à ce qu'aucune tâche ne soit laissée sur la touche.
 
 ```python
 def run_tasks(*tasks):
@@ -46,7 +51,7 @@ def run_tasks(*tasks):
             tasks.append(task)
 ```
 
-À l'utilisation, ça nous donne :
+Que nous pouvons utiliser comme suit :
 
 ```python
 >>> run_tasks(simple_print(1), ComplexWork(), simple_print(2), simple_print(3))
@@ -57,7 +62,23 @@ Hello
 World
 ```
 
-Comme on le voit, la boucle n'attend pas qu'une tâche soit terminée avant d'exécuter les autres.
+Ou avec notre objet `Waiter` :
+
+```python
+>>> waiter = Waiter()
+>>> run_tasks(wait_job(waiter), count_up_to(waiter, 5))
+start
+0
+1
+2
+3
+4
+finished
+```
+
+(Attention toutefois dans ce cas à bien utiliser un `asyncio.sleep(0)` dans `count_up_to`, nous verrons plus loin pourquoi notre code ne peut fonctionner avec d'autres valeurs.)
+
+Comme on le voit dans ces deux exemples, la boucle n'attend pas qu'une tâche soit terminée avant d'exécuter les autres.
 Il suffit d'une interruption dans la tâche pour que la boucle reprenne le contrôle et itère sur la suivante.
 
 D'ailleurs, pour simplifier les exemples qui suivront, nous allons réaliser une tâche qui ne consistera qu'en une interruption.

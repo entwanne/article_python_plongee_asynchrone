@@ -38,7 +38,7 @@ Traceback (most recent call last):
 StopIteration
 ```
 
-Les exemples montrent ici une utilisation directe de notre tâche, mais nous pourrions tout aussi bien l'utiliser derrière un `await`.
+Les exemples montrent ici une utilisation directe de notre tâche au sein d'une boucle, mais nous pourrions tout aussi bien l'utiliser derrière un `await`.
 
 ```python
 >>> async def runner():
@@ -51,6 +51,8 @@ World
 
 Il est peu fréquent d'avoir à définir un *awaitable* autre qu'une coroutine, mais cela peut être utile pour toucher aux aspects bas-niveau du moteur asynchrone ou pour associer un état à notre tâche.
 
+L'exemple suivant présente une tâche permettant d'attendre d'avoir été notifiée pour continuer.
+
 ```python
 class Waiter:
     def __init__(self):
@@ -61,21 +63,25 @@ class Waiter:
             yield
 ```
 
+Son code est relativement simple, l'objet est initialisé avec un état `done` à `False`, et l'itérateur renvoyé bouclera tant que cet état ne sera pas `True`, forçant la boucle appelante à attendre.
+
+À l'utilisation, cela nous donne :
+
 ```python
 >>> waiter = Waiter()
 >>>
->>> async def coro1():
+>>> async def wait_job(waiter):
 ...     print('start')
-...     await waiter
+...     await waiter # wait for count_up_to to be finished
 ...     print('finished')
 ...
->>> async def coro2():
-...     for i in range(10):
+>>> async def count_up_to(waiter, n):
+...     for i in range(n):
 ...         print(i)
-...         await asyncio.sleep(1)
+...         await asyncio.sleep(0)
 ...     waiter.done = True
 ...
->>> loop.run_until_complete(asyncio.gather(coro1(), coro2()))
+>>> loop.run_until_complete(asyncio.gather(wait_job(waiter), count_up_to(waiter, 10)))
 start
 0
 1
@@ -93,4 +99,5 @@ finished
 
 (`gather` est un utilitaire `asyncio` pour exécuter simultanément plusieurs tâches).
 
-Comme on le voit, notre objet `Waiter` permet à `coro1` d'attendre la fin de l'exécution de `coro2` avant de continuer.
+Comme on le voit, notre objet `Waiter` permet à `wait_job` d'attendre la fin de l'exécution de `count_up_to` avant de continuer.
+Vous pouvez d'ailleurs faire varier le temps de *sleep* pour constater que ce n'est pas un hasard et que `«ait_job` attend bien.
