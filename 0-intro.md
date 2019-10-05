@@ -9,3 +9,6 @@ Les tâches asynchrones n'échappent pas à cette règle, étant simplement des 
 
 Cet article présuppose une version de Python supérieure ou égale à 3.5, intégrant les mot-clés `async` et `await`.
 Une connaissance minimale du modèle asynchrone de Python et de la bibliothèque `asyncio` sont préférables.
+
+* https://zestedesavoir.com/articles/152/la-puissance-cachee-des-coroutines/
+* https://zestedesavoir.com/articles/1568/decouvrons-la-programmation-asynchrone-en-python/
