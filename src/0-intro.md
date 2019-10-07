@@ -1,6 +1,3 @@
-% Plongée au cœur du modèle asynchrone Python
-% Antoine Rozo
-
 # Introduction
 
 Si vous vous êtes déjà intéressé de près aux mécanismes de Python, vous savez qu'ils reposent sur des interfaces et méthodes spéciales, telles que `__iter__` pour les itérables, `__getitem__` pour les conteneurs ou `__call__` pour les appelables.
