@@ -131,8 +131,71 @@ baz
 * Définition d'une vraie classe de boucle avec des méthodes call_soon / run / run_until_complete
 * Rendre la boucle accessible dans les tâches (get_current_loop)
 
-Un autre utilitaire serait une tâche permettant d'en attendre d'autres en les exécutant simultanément (l'équivalent d'une sous-boucle) qu'on appellera `gather`.
+Mais une boucle serait plus utile si on pouvait interagir avec elle, pour programmer de nouvelles tâches par exemple.
 
 ```python
-def gather(*tasks)
+class Loop:
+    def __init__(self):
+        self.tasks = []
+
+    def add_task(self, task):
+        self.tasks.append(task.__await__())
+
+    def run(self):
+        while self.tasks:
+            task = self.tasks.pop(0)
+            try:
+                next(task)
+            except StopIteration:
+                pass
+            else:
+                self.tasks.append(task)
+
+    def run_task(self, task):
+        self.add_task(task)
+        self.run()
+```
+
+On pourrait pour le moment se demander l'intérêt de cette classe.
+Le tout vient de la fonction `add_task`, qui permettrait à un élément extérieur d'ajouter des tâches, si tant est qu'il ait accès à la boucle.
+
+Nous allons pour cela considérer que nous sommes dans un environnement simple avec un seul _thread_ et utiliser une variable globale pour stocker la boucle courante.
+
+```python
+current_loop = None
+
+
+class Loop:
+    ...
+
+    def run(self):
+        global current_loop
+        current_loop = self
+        ...
+```
+
+```python
+class Waiter:
+    def __init__(self, n=1):
+        self.i = n
+
+    def set(self):
+        self.i -= 1
+
+    def __await__(self):
+        while self.i > 0:
+            yield
+```
+
+```python
+async def gather(*tasks):
+    waiter = Waiter(len(tasks))
+
+    async def task_wrapper(task):
+        await task
+        waiter.set()
+
+    for t in tasks:
+        current_loop.add_task(task_wrapper(t))
+    await waiter
 ```

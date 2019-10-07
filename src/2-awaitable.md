@@ -100,4 +100,4 @@ finished
 (`gather` est un utilitaire `asyncio` pour exécuter simultanément plusieurs tâches).
 
 Comme on le voit, notre objet `Waiter` permet à `wait_job` d'attendre la fin de l'exécution de `count_up_to` avant de continuer.
-Vous pouvez d'ailleurs faire varier le temps de *sleep* pour constater que ce n'est pas un hasard et que `«ait_job` attend bien.
+Vous pouvez d'ailleurs faire varier le temps de *sleep* pour constater que ce n'est pas un hasard et que `wait_job` attend bien.
