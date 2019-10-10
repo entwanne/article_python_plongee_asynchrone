@@ -156,21 +156,27 @@ class Loop:
         self.run()
 ```
 
+```python
+>>> loop = Loop()
+>>> loop.run_task(print_messages('foo', 'bar', 'baz'))
+foo
+bar
+baz
+```
+
 On pourrait pour le moment se demander l'intérêt de cette classe.
 Le tout vient de la fonction `add_task`, qui permettrait à un élément extérieur d'ajouter des tâches, si tant est qu'il ait accès à la boucle.
 
 Nous allons pour cela considérer que nous sommes dans un environnement simple avec un seul _thread_ et utiliser une variable globale pour stocker la boucle courante.
 
 ```python
-current_loop = None
-
-
 class Loop:
+    current = None
+
     ...
 
     def run(self):
-        global current_loop
-        current_loop = self
+        Loop.current = self
         ...
 ```
 
@@ -196,6 +202,17 @@ async def gather(*tasks):
         waiter.set()
 
     for t in tasks:
-        current_loop.add_task(task_wrapper(t))
+        Loop.current.add_task(task_wrapper(t))
     await waiter
+```
+
+```python
+>>> loop.run_task(gather(print_messages('foo', 'bar', 'baz'),
+...     print_messages('aaa', 'bbb', 'ccc', sleep_time=0.7)))
+foo
+aaa
+bbb
+bar
+ccc
+baz
 ```

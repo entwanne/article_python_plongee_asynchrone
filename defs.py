@@ -91,8 +91,9 @@ async def print_messages(*messages, sleep_time=1):
         await sleep(sleep_time)
 
 
-current_loop = None
 class Loop:
+    current = None
+
     def __init__(self):
         self.tasks = []
 
@@ -100,8 +101,7 @@ class Loop:
         self.tasks.append(task.__await__())
 
     def run(self):
-        global current_loop
-        current_loop = self
+        Loop.current = self
         while self.tasks:
             task = self.tasks.pop(0)
             try:
@@ -136,5 +136,5 @@ async def gather(*tasks):
         waiter.set()
 
     for t in tasks:
-        current_loop.add_task(task_wrapper(t))
+        Loop.current.add_task(task_wrapper(t))
     await waiter
