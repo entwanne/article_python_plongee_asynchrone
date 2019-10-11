@@ -138,3 +138,54 @@ async def gather(*tasks):
     for t in tasks:
         Loop.current.add_task(task_wrapper(t))
     await waiter
+
+
+class ARange:
+    def __init__(self, stop):
+        self.stop = stop
+
+    def __aiter__(self):
+        return ARangeIterator(self)
+
+
+class ARangeIterator:
+    def __init__(self, arange):
+        self.arange = arange
+        self.i = 0
+
+    async def __anext__(self):
+        if self.i >= self.arange.stop:
+            raise StopAsyncIteration
+        await sleep(1)
+        i = self.i
+        self.i += 1
+        return i
+
+
+async def arange(stop):
+    for i in range(stop):
+        await sleep(1)
+        yield i
+
+
+class SQL:
+    async def __aenter__(self):
+        print('Connecting...')
+        await sleep(1)
+        return self
+
+    async def __aexit__(self, *args):
+        print('Closing')
+        await sleep(1)
+
+
+from contextlib import asynccontextmanager
+@asynccontextmanager
+async def sql():
+    try:
+        print('Connecting...')
+        await sleep(1)
+        yield
+    finally:
+        print('Closing')
+        await sleep(1)
