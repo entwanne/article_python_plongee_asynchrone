@@ -216,3 +216,5 @@ bar
 ccc
 baz
 ```
+
+\+ exemple socket + socketserver (select + await release)
