@@ -1,9 +1,0 @@
-Catégorie de proposition : Conférence (50min)
-
-Titre de la proposition : Plongée au cœur du modèle asynchrone Python
-
-Description de votre proposition :
-Tout mécanisme Python, que ce soit les itérables, les conteneurs ou encore les appelables, repose sur des interfaces simples.
-Le modèle de programmation asynchrone et ses coroutines n'échappent pas à la règle et se basent aussi sur des méthodes spéciales que nous allons découvrir.
-
-L'objectif de cette présentation est d'explorer ces interfaces et de construire pas à pas un équivalent minimaliste d'asyncio.
