@@ -7,7 +7,9 @@ async def simple_print(msg):
     print(msg)
 ```
 
-`simple_print` est en fait ici une fonction qui renvoie une nouvelle coroutine à chaque appel.
+Techniquement, `simple_print` n'est pas une coroutine.
+C'est en fait une fonction qui renvoie une nouvelle coroutine à chaque appel.
+Comme toute fonction, `simple_print` peut donc recevoir des arguments, qui seront utilisés par la coroutine et influeront sur son comportement.
 
 ```python
 >>> simple_print
@@ -16,7 +18,11 @@ async def simple_print(msg):
 <coroutine object simple_print at 0x7f08738959e0>
 ```
 
-Le contenu d'une coroutine ne s'exécute pas directement, il faut que celle-ci soit lancée dans un moteur asynchrone, tel qu'`asyncio`.
+Le contenu d'une coroutine ne s'exécute pas directement, il faut la lancer dans un environnement asynchrone.
+Par exemple avec un `await` utilisé depuis une autre coroutine.
+
+Ici nous allons faire appel à `asyncio`, le moteur asynchrone de la bibliothèque standard.
+Il possède une méthode `run` permettant d'exécuter le contenu d'une coroutine.
 
 ```python
 >>> import asyncio
@@ -33,26 +39,42 @@ Si l'on omet les opérations de finalisation qu'ajoute `asyncio.run`, le code pr
 Hello
 ```
 
-Il s'agit donc d'une boucle événementielle, chargée d'exécuter et de cadencer les différentes tâches, pour permettre une utilisation concurrente.
+Il s'agit donc d'une boucle événementielle, chargée d'exécuter et de cadencer les différentes tâches.
+La boucle est propre au moteur asynchrone utilisé, et permet une utilisation concurrente des tâches.
 
-Mais que fait donc ce `run_until_complete` pour exécuter notre code, et à quoi au juste correspond une coroutine ?
+Mais de quoi est donc faite une coroutine ?
+Comment fait ce `run_until_complete` pour exécuter notre code ?
+
 En inspectant l'objet renvoyé par `simple_print`, on remarque qu'il possède une méthode `__await__`.
-Mais aussi que l'appel à cette méthode renvoie un itérateur.
 
 ```python
 >>> coro = simple_print('Hello')
 >>> dir(coro)
 ['__await__', ...]
+```
+
+La coroutine serait donc un objet avec une méthode spéciale `__await__`.
+Nous voilà un peu plus avancés, plus qu'à en apprendre davantage sur cette méthode.
+
+Mais aussi que l'appel à cette méthode renvoie un itérateur.
+On voit qu'elle s'appelle sans arguments et qu'elle renvoie un objet de type `coroutine_wrapper`.
+Mais en inspectant à nouveau, on remarque que cet objet est un itérateur !
+
+```python
 >>> aw = coro.__await__()
 >>> aw
 <coroutine_wrapper object at 0x7fcde8f30710>
 >>> dir(aw)
-[..., '__iter__', ..., '__next__', ..., 'close', 'send', 'throw']
+[..., '__iter__', ..., '__next__', ..., 'send', 'throw']
 ```
 
-C'est en fait cet itérateur spécial qui est ensuite parcouru par la boucle événementielle.
+Plus précisément, il s'agit ici d'un générateur, reconnaissable aux méthodes `send` et `throw`.
 
-Cela signifie que l'on pourrait donc traiter nos coroutines en itérant manuellement sur l'itérateur qu'elles renvoient.
+En résumé, les coroutines possèdent donc une méthode `__await__` qui renvoie un itérateur.
+Cela semble logique si vous vous souvenez des articles donnés en introduction, qui montrent que la coroutine est un enrobage autour d'un générateur.
+
+Les coroutines pouvant être converties en itérateurs, on comprend maintenant comment la boucle événementielle est capable des les parcourir.
+Une simple boucle `for` pourrait faire l'affaire, en itérant manuellement sur l'objet renvoyé par `__await__`.
 
 ```python
 >>> for _ in simple_print('Hello').__await__():
@@ -61,7 +83,8 @@ Cela signifie que l'on pourrait donc traiter nos coroutines en itérant manuelle
 Hello
 ```
 
-Cela fonctionne aussi avec des exemples plus complexes.
+La coroutine présentée ici ne réalise aucune opération asynchrone, elle ne fait qu'afficher un message.
+Voici un exemple plus parlant d'une coroutine plus complexe faisant appel à d'autres tâches.
 
 ```python
 async def complex_work():
@@ -69,6 +92,8 @@ async def complex_work():
     await asyncio.sleep(0)
     await simple_print('World')
 ```
+
+Le comportement est le même : itérer sur l'objet renvoyé par `__await__` permet d'exécuter le corps de la coroutine.
 
 ```python
 >>> for _ in complex_work().__await__():
@@ -78,7 +103,12 @@ Hello
 World
 ```
 
-On ne le voit pas directement ici mais notre boucle parcourt bien plusieurs itérations :
+Mais avec cette simple boucle on ne voit pas clairement ce qui délimite les itérations.
+Impossible de savoir en voyant le code précédent combien la boucle a fait d'itérations (et donc à quel moment elle a repris la main).
+
+Les itérateurs ne s'utilisent pas uniquement avec des boucles `for`, on peut aussi les parcourir pas à pas à l'aide de la fonction `next`.
+`next` renvoie à chaque appel l'élément suivant de l'itérateur, et lève une exception `StopIteration` en fin de parcours.
+C'est donc cette fonction que nous allons utiliser pour l'exécution, qui rendra visible chaque interruption de la tâche.
 
 ```python
 >>> it = complex_work().__await__()
@@ -91,6 +121,11 @@ Traceback (most recent call last):
 StopIteration
 ```
 
-C'est en fait le `await asyncio.sleep(0)` qui a pour effet de rendre la main à la boucle événementielle (et donc d'enclancher une nouvelle itération), il est équivalent à un `yield` dans le contexte d'un générateur (mais de manière générale `await` est plutôt équivalent à un `yield from`).
+Cela apparaît très clairement maintenant, notre boucle réalise deux itérations.
+Chaque interruption permet à la boucle de reprendre la main, de gérer les événements et de cadencer les tâches (choisir de les suspendre ou les continuer), c'est ainsi qu'elle peut en exécuter « simultanément » (de façon concourrente).
 
-Ainsi, à chacune de ces interruptions, la boucle évenementielle reprend le contrôle et décide de suspendre ou continuer telle ou telle tâche (c'est ce qui lui permet d'en exécuter plusieurs simultanément).
+C'est ici l'expression `await asyncio.sleep(0)` qui est responsable de l'interruption dans notre itération, elle est similaire à un `yield` pour un générateur.
+`await` est l'équivalent du `yield from`, il délégue l'itération à une sous-tâche.
+Il ne provoque pas d'interruption en lui-même, celle-ci ne survient que si elle est déclenchée par la sous-tâche (nous verrons par la suite par quel moyen).
+
+`asyncio.sleep(0)` est un cas particulier de `sleep` qui ne fait qu'une simple interruption, sans attente. Le comportement serait différent avec un temps non nul.
