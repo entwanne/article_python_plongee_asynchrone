@@ -1,11 +1,13 @@
 # Attendez-moi !
 
-On a vu que les coroutines pouvaient s'utiliser dans des boucles événementielles ou derrière le mot-clé *await*, mais d'autres objets en sont aussi capables.
-On parle ainsi plus généralement de tâches asynchrones ou d'*awaitables*.
+Les coroutines ne sont pas les seuls objets qui peuvent s'utiliser derrière le mot-clé `await`.
+Plus généralement on parle de tâches asynchrones (ou *awaitables*) pour qualifier ces objets.
 
-Un *awaitable* est un objet qui possède une méthode spéciale `__await__`, renvoyant un itérateur.
+Ainsi, un *awaitable* est un objet caractérisé par une méthode `__await__` renvoyant un itérateur.
+Les coroutines sont un cas particulier de tâches asynchrones construites autour d'un générateur (avant Python 3.5, on créait d'ailleurs une coroutine à l'aide d'un décorateur -- `asyncio.coroutine` -- appliqué à une fonction génératrice).
 
-Voici par exemple un équivalent de notre fonction `complex_work`.
+Voici par exemple un équivalent à notre fonction `complex_work`.
+`ComplexWork` est ici une classe dont les instances sont des tâches asynchrones.
 
 ```python
 class ComplexWork:
@@ -16,6 +18,7 @@ class ComplexWork:
 ```
 
 Avec le mot-clé `yield`, notre méthode `__await__` devient une fonction génératrice et renvoie donc un itérateur.
+On utilise `yield` sans paramètre, notre boucle événementielle ne s'occupant pas des valeurs renvoyées lors de l'itération, seule l'exécution importe.
 
 Nous pouvons exécuter notre tâche asynchrone dans une boucle évenementielle `asyncio` :
 
@@ -25,7 +28,7 @@ Hello
 World
 ```
 
-Ou via une itération manuelle comme précédemment :
+Et notre objet respecte le protocole établi : il est possible d'itérer sur le retour d'`__await__`.
 
 ```python
 >>> it = ComplexWork().__await__()
@@ -38,20 +41,12 @@ Traceback (most recent call last):
 StopIteration
 ```
 
-Les exemples montrent ici une utilisation directe de notre tâche au sein d'une boucle, mais nous pourrions tout aussi bien l'utiliser derrière un `await`.
+--------------------
 
-```python
->>> async def runner():
-...     await ComplexWork()
-... 
->>> loop.run_until_complete(runner())
-Hello
-World
-```
+En pratique, il est assez peu fréquent d'avoir besoin de définir un *awaitable* autre qu'une coroutine.
+C'est néanmoins utile si l'on souhaite conserver un état associé à notre tâche, pour pouvoir interagir avec elle depuis l'extérieur en altérant cet état.
 
-Il est peu fréquent d'avoir à définir un *awaitable* autre qu'une coroutine, mais cela peut être utile pour toucher aux aspects bas-niveau du moteur asynchrone ou pour associer un état à notre tâche.
-
-L'exemple suivant présente une tâche permettant d'attendre d'avoir été notifiée pour continuer.
+Prenons par exemple la classe `Waiter` qui suit, qui permet d'attendre un résultat.
 
 ```python
 class Waiter:
@@ -63,9 +58,11 @@ class Waiter:
             yield
 ```
 
-Son code est relativement simple, l'objet est initialisé avec un état `done` à `False`, et l'itérateur renvoyé bouclera tant que cet état ne sera pas `True`, forçant la boucle appelante à attendre.
+Le principe est relativement simple : l'objet est initialisé avec un état booléen `done` à `False`, puis son générateur rend la main continuellement tant que l'état ne vaut pas `True`, forçant la boucle appelante à attendre.
+Une fois cet état passe à `True`, le générateur prend fin et la tâche asynchrone est donc terminée.
 
-À l'utilisation, cela nous donne :
+On utilise `Waiter` pour synchroniser deux tâches asynchrones.
+En effet, avec un objet `waiter` partagé entre deux tâches, une première peut attendre sur cet objet tandis qu'une seconde exécute un calcul avant de changer l'état du *waiter* (signalant que le calcul est terminé et permettant à la première tâche de continuer).
 
 ```python
 >>> waiter = Waiter()
@@ -97,7 +94,10 @@ finished
 [None, None]
 ```
 
-(`gather` est un utilitaire `asyncio` pour exécuter simultanément plusieurs tâches).
+`Waiter` permet donc ici à `wait_job` d'attendre la fin de l'exécution de `count_up_to` avant de continuer.
+Il est possible de faire varier le temps de `sleep` pour constater qu'il ne s'agit pas d'un hasard : la première tâche se met en pause tant que la seconde n'a pas terminé son traitement.
 
-Comme on le voit, notre objet `Waiter` permet à `wait_job` d'attendre la fin de l'exécution de `count_up_to` avant de continuer.
-Vous pouvez d'ailleurs faire varier le temps de *sleep* pour constater que ce n'est pas un hasard et que `wait_job` attend bien.
+`gather` est un utilitaire d'`asyncio` servant à exécuter « simultanément » (en concurrence) plusieurs tâches asynchrones dans la boucle événementielle.
+La fonction renvoie la liste des résultats des sous-tâches (le `[None, None]` que l'on voit dans la fin de l'exemple, nos tâches ne renvoyant rien).
+
+D'autres utilisations de `Waiter` sont possibles, à des fins de synchronisation, par exemple pour gérer des verrous (*mutex*) entre plusieurs tâches.
