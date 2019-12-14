@@ -20,7 +20,7 @@ class ComplexWork:
 Avec le mot-clé `yield`, notre méthode `__await__` devient une fonction génératrice et renvoie donc un itérateur.
 On utilise `yield` sans paramètre, notre boucle événementielle ne s'occupant pas des valeurs renvoyées lors de l'itération, seule l'exécution importe.
 
-Nous pouvons exécuter notre tâche asynchrone dans une boucle évenementielle `asyncio` :
+Nous pouvons exécuter notre tâche asynchrone dans une boucle évenementielle *asyncio* :
 
 ```python
 >>> loop.run_until_complete(ComplexWork())
@@ -62,7 +62,7 @@ Le principe est relativement simple : l'objet est initialisé avec un état boo
 Une fois cet état passe à `True`, le générateur prend fin et la tâche asynchrone est donc terminée.
 
 On utilise `Waiter` pour synchroniser deux tâches asynchrones.
-En effet, avec un objet `waiter` partagé entre deux tâches, une première peut attendre sur cet objet tandis qu'une seconde exécute un calcul avant de changer l'état du *waiter* (signalant que le calcul est terminé et permettant à la première tâche de continuer).
+En effet, avec un objet `waiter` partagé entre deux tâches, une première peut attendre sur cet objet tandis qu'une seconde exécute un calcul avant de changer l'état du `waiter` (signalant que le calcul est terminé et permettant à la première tâche de continuer).
 
 ```python
 >>> waiter = Waiter()
@@ -97,7 +97,7 @@ finished
 `Waiter` permet donc ici à `wait_job` d'attendre la fin de l'exécution de `count_up_to` avant de continuer.
 Il est possible de faire varier le temps de `sleep` pour constater qu'il ne s'agit pas d'un hasard : la première tâche se met en pause tant que la seconde n'a pas terminé son traitement.
 
-`gather` est un utilitaire d'`asyncio` servant à exécuter « simultanément » (en concurrence) plusieurs tâches asynchrones dans la boucle événementielle.
+`gather` est un utilitaire d'*asyncio* servant à exécuter « simultanément » (en concurrence) plusieurs tâches asynchrones dans la boucle événementielle.
 La fonction renvoie la liste des résultats des sous-tâches (le `[None, None]` que l'on voit dans la fin de l'exemple, nos tâches ne renvoyant rien).
 
 D'autres utilisations de `Waiter` sont possibles, à des fins de synchronisation, par exemple pour gérer des verrous (*mutex*) entre plusieurs tâches.

@@ -21,7 +21,7 @@ Comme toute fonction, `simple_print` peut donc recevoir des arguments, qui seron
 Le contenu d'une coroutine ne s'exécute pas directement, il faut la lancer dans un environnement asynchrone.
 Par exemple avec un `await` utilisé depuis une autre coroutine.
 
-Ici nous allons faire appel à `asyncio`, le moteur asynchrone de la bibliothèque standard.
+Ici nous allons faire appel à *asyncio*, le moteur asynchrone de la bibliothèque standard.
 Il possède une méthode `run` permettant d'exécuter le contenu d'une coroutine.
 
 ```python
@@ -30,7 +30,7 @@ Il possède une méthode `run` permettant d'exécuter le contenu d'une coroutine
 Hello
 ```
 
-Derrière cette simple ligne, `asyncio` se charge d'instancier une nouvelle boucle événementielle, de démarrer notre coroutine et d'attendre que celle-ci se termine.
+Derrière cette simple ligne, *asyncio* se charge d'instancier une nouvelle boucle événementielle, de démarrer notre coroutine et d'attendre que celle-ci se termine.
 Si l'on omet les opérations de finalisation qu'ajoute `asyncio.run`, le code précédent est équivalent à :
 
 ```python
