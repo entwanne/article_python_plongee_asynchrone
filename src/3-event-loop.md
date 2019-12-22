@@ -140,10 +140,9 @@ baz
 
 --------------------
 
-* Définition d'une vraie classe de boucle avec des méthodes call_soon / run / run_until_complete
-* Rendre la boucle accessible dans les tâches (get_current_loop)
+La « boucle » que nous utilisons pour le moment ne permet aucune interaction : une fois lancée, il n'est par exemple plus possible d'ajouter de nouvelles tâches. Ça limite beaucoup les cas d'utilisation.
 
-Mais une boucle serait plus utile si on pouvait interagir avec elle, pour programmer de nouvelles tâches par exemple.
+Pour remédier à cela, nous allons donc transformer notre fonction en classe afin de lui ajouter un état (la liste des tâches en cours) et une méthode `add_task` pour programmer de nouvelles tâches à la volée.
 
 ```python
 class Loop:
@@ -151,7 +150,9 @@ class Loop:
         self.tasks = []
 
     def add_task(self, task):
-        self.tasks.append(task.__await__())
+        if hasattr(task, '__await__'):
+            task = task.__await__()
+        self.tasks.append(task)
 
     def run(self):
         while self.tasks:
@@ -161,12 +162,23 @@ class Loop:
             except StopIteration:
                 pass
             else:
-                self.tasks.append(task)
+                self.add_task(task)
+```
+
+Les deux premières lignes de la méthode `add_task` sont utiles pour reprogrammer une tâche déjà en cours (appel ligne 18), qui aura déjà été transformée en itérateur auparavant.
+
+On peut aussi ajouter une méthode utilitaire, `run_task`, pour faciliter le lancement d'une tâche seule.
+
+```python
+class Loop:
+    [...]
 
     def run_task(self, task):
         self.add_task(task)
         self.run()
 ```
+
+À l'utilisation, on retrouve le même comportement que précédemment.
 
 ```python
 >>> loop = Loop()
@@ -176,21 +188,32 @@ bar
 baz
 ```
 
-On pourrait pour le moment se demander l'intérêt de cette classe.
-Le tout vient de la fonction `add_task`, qui permettrait à un élément extérieur d'ajouter des tâches, si tant est qu'il ait accès à la boucle.
-
-Nous allons pour cela considérer que nous sommes dans un environnement simple avec un seul _thread_ et utiliser une variable globale pour stocker la boucle courante.
+Notre boucle possède maintenant un état, mais il n'est toujours pas possible d'interagir avec elle depuis nos tâches asynchrones, car nous n'avons aucun moyen de connaître la boucle en cours d'exécution.  
+Pour cela, nous ajoutons un attribut de classe `current` référençant la boucle en cous, réinitialisé à chaque `run`.
 
 ```python
 class Loop:
-    current = None
+    [...]
 
-    ...
+    current = None
 
     def run(self):
         Loop.current = self
-        ...
+        [...]
 ```
+
+Dans un environnement réel, il nous faudrait réinitialiser `current` à chaque tour de boucle dans le `run`, pour permettre à plusieurs boucles de coexister.
+Mais le code proposé ici ne l'est qu'à titre d'exemple, on notera aussi que le traitement n'est pas *thread-safe*.
+
+--------------------
+
+Cet attribut `Loop.current` va nous être d'une grande utilité pour réaliser notre propre coroutine `gather`.
+Pour rappel, cet outil permet de lancer plusieurs coroutines « simultanément » et d'attendre qu'elles soient toutes terminées.
+
+On peut commencer par reprendre notre classe `Waiter` pour étendre son comportement.
+Plutôt que de n'avoir qu'un état booléen, on le remplace par un compteur, décrémenté à chaque notification.
+On le dote alors d'une méthode `set` pour le notifier.
+L'attente d'un objet `Waiter` se termine une fois qu'il a été notifié `n` fois.
 
 ```python
 class Waiter:
@@ -205,6 +228,11 @@ class Waiter:
             yield
 ```
 
+À partir de ce `Waiter` il devient très facile de recoder `gather`.
+Il suffit en effet d'instancier un `Waiter` en lui donnant le nombre de tâches, d'ajouter ces tâches à la boucle courante à l'aide de `Loop.current.add_task`, et d'attendre le `Waiter`.
+
+Une petite subtilité seulement : les tâches devront être enrobées dans une nouvelle coroutine afin qu'elles notifient le `Waiter` en fin de traitement.
+
 ```python
 async def gather(*tasks):
     waiter = Waiter(len(tasks))
@@ -218,9 +246,16 @@ async def gather(*tasks):
     await waiter
 ```
 
+On constate bien l'exécution concurrente des tâches, il est possible de faire varier le temps de pause pour observer les changements.
+
 ```python
->>> loop.run_task(gather(print_messages('foo', 'bar', 'baz'),
-...     print_messages('aaa', 'bbb', 'ccc', sleep_time=0.7)))
+>>> loop = Loop()
+>>> loop.run_task(
+...     gather(
+...         print_messages('foo', 'bar', 'baz'),
+...         print_messages('aaa', 'bbb', 'ccc', sleep_time=0.7),
+...     )
+... )
 foo
 aaa
 bbb
@@ -228,5 +263,27 @@ bar
 ccc
 baz
 ```
+
+Et contrairement à notre précédent `run_tasks` qui permettait déjà celà, `gather` peut s'utiliser partout derrière un `await`, permettant de construire de vrais *workflows*.
+
+```python
+>>> async def workflow():
+...     await gather(
+...         print_messages('a', 'b'),
+...         print_messages('c', 'd', 'e'),
+...     )
+...     await print_messages('f', 'g')
+...
+>>> loop.run_task(workflow())
+a
+c
+b
+d
+e
+f
+g
+```
+
+--------------------
 
 \+ exemple socket + socketserver (select + await release)
