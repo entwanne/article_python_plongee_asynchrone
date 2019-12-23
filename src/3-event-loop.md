@@ -286,4 +286,124 @@ g
 
 --------------------
 
-\+ exemple socket + socketserver (select + await release)
+Oublions ce `print_messages` et venons-en à des cas d'utilisation plus concrets.
+Les environnements asynchrones sont particulièrement adaptés aux programmes qui réalisent beaucoup d'opérations d'entrée/sortie (*I/O*), tels que des applications réseau.
+Voici par exemple comment nous pourrions intégrer des *sockets* (connecteurs réseau) à notre moteur asynchrone.
+
+Nous utiliserons pour cela le type `socket` de Python, ainsi que la fonction `select` qui nous permet de savoir quand un fichier est prêt en lecture et/ou écriture.
+Le principe est alors, pour chaque opération, de vérifier si la *socket* est prête avant d'exécuter le traitement, et d'interrompre la coroutine le cas échéant afin de réessayer plus tard.
+À ce moment-là, la boucle événementielle reprend la main et peut continuer ses autres opérations pour ne pas les bloquer.
+
+On construit une classe `AIOSocket`, reprenant l'interface de `socket`.
+Notre classe sera appelée avec une `socket` déjà instanciée, il ne reste alors plus qu'à instancier les sélecteurs pour l'écouter en lecture et en écriture.
+Nous ajoutons les méthodes `close` et `fileno` pour respecter l'interface, ainsi que le protocole des gestionnaires de contexte.
+
+```python
+import select
+
+class AIOSocket:
+    def __init__(self, socket):
+        self.socket = socket
+        self.pollin = select.epoll()
+        self.pollin.register(self, select.EPOLLIN)
+        self.pollout = select.epoll()
+        self.pollout.register(self, select.EPOLLOUT)
+
+    def close(self):
+        self.socket.close()
+
+    def fileno(self):
+        return self.socket.fileno()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.socket.close()
+```
+
+Et maintenant les coroutines de connexion, sur le modèle donné plus haut : attendre que la *socket* soit prête et exécuter l'opération ensuite.
+
+```python
+class AIOSocket:
+    [...]
+
+    async def bind(self, addr):
+        while not self.pollin.poll():
+            await interrupt()
+        self.socket.bind(addr)
+
+    async def listen(self):
+        while not self.pollin.poll():
+            await interrupt()
+        self.socket.listen()
+
+    async def connect(self, addr):
+        while not self.pollin.poll():
+            await interrupt()
+        self.socket.connect(addr)
+```
+
+Toujours sur ce modèle, on ajoute ensuite les coroutines de lecture/écriture.
+On notera juste que la méthode `accept` d'une *socket* renvoie un couple *(socket, adresse)*.
+Nous ignorons ici l'adresse et emballons la *socket* dans une instance `IOSocket`, afin de renvoyer un objet du même type.
+
+```python
+class AIOSocket:
+    [...]
+
+    async def accept(self):
+        while not self.pollin.poll(0):
+            await interrupt()
+        client, _ = self.socket.accept()
+        return self.__class__(client)
+
+    async def recv(self, bufsize):
+        while not self.pollin.poll(0):
+            await interrupt()
+        return self.socket.recv(bufsize)
+
+    async def send(self, bytes):
+        while not self.pollout.poll(0):
+            await interrupt()
+        return self.socket.send(bytes)
+```
+
+Enfin, on ajoute un utilitaire pour créer une *socket* asynchrone de toutes pièces, reprenant les paramètres et valeurs par défaut de `socket`.
+
+```python
+import socket
+
+def aiosocket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, fileno=None):
+    return AIOSocket(socket.socket(family, type, proto, fileno))
+```
+
+Avec ces *sockets* asynchrones, nous pouvons facilement créer des coroutines représentant un client et un serveur.
+Dans l'exemple qui suit, le serveur gère un unique client et ne fait que lui renvoyer le message reçu en l'inversant.
+
+```python
+async def server_coro():
+    with aiosocket() as server:
+        await server.bind(('localhost', 8080))
+        await server.listen()
+        with await server.accept() as client:
+            msg = await client.recv(1024)
+            print('Received from client', msg)
+            await client.send(msg[::-1])
+
+async def client_coro():
+    with aiosocket() as client:
+        await client.connect(('localhost', 8080))
+        await client.send(b'Hello World!')
+        msg = await client.recv(1024)
+        print('Received from server', msg)
+```
+
+```python
+>>> loop = Loop()
+>>> loop.run_task(gather(server_coro(), client_coro()))
+Received from client b'Hello World!'
+Received from server b'!dlroW olleH'
+```
+
+On constate bien que rien n'est bloquant, les deux coroutines ont pu s'exécuter en concurrence, rendant la main à la boucle quand les *I/O* étaient indisponibles.
