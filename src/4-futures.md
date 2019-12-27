@@ -1,4 +1,37 @@
-# Futures
+# No Future
+
+Le moteur asynchrone du chapitre précédent est assez peu efficace, notamment sa fonction `sleep`.
+En effet : la tâche est bien interrompue le temps de l'attente, mais elle est reprogrammée par la boucle à chaque itération, pour rien.
+De même pour la tâche `Waiter` qui n'a normalement pas besoin d'être programmée tant que son compteur ne vaut pas zéro.
+
+On sait qu'une tâche est suspendue car elle attend qu'une condition (temporelle ou autre) soit vraie.
+il serait alors intéressant que la boucle événementielle ait connaissance de cela et ne cadence que les tâches dont les préconditions sont remplies.
+
+Pour éviter ce problème, `asyncio` utilise un mécanisme de *futures*.
+Une *future* est une tâche asynchrone spécifique, qui permet d'attendre un résultat qui n'a pas encore été calculé.
+La *future* ne peut être relancée par la boucle événementielle qu'une fois ce résultat obtenu.
+
+Il se trouve que le `yield` utilisé dans nos tâches pour rendre la main à la boucle peut s'accompagner d'une valeur, comme dans tout générateur.
+Ici, il va nous servir à communiquer avec la boucle, pour lui indiquer la *future* en cours.
+C'est ce que fait `asyncio.sleep` avec une durée non nulle par exemple.
+
+On peut commencer avec un prototype de *future* tout simple, sur le modèle de notre première classe `Waiter`.
+
+```python
+class Future:
+    def __await__(self):
+        yield self
+        assert self.done
+```
+
+Nous n'avons pas besoin de boucle ici, puisque la tâche ne devrait pas être programmée plus de deux fois : une première fois pour démarrer l'attente, et une seconde après que la condition soit remplie pour reprendre le travail de la tâche appelante.
+On place néanmoins un `assert` pour s'assurer que ce soit bien le cas.
+
+Lorsque, depuis une coroutine, on fera un `await Future()`, la valeur passée au `yield` remontera le flux des appels jusqu'à la boucle événementielle, qui la recevra en valeur de retour de `next`.
+Ainsi, un `yield self` depuis la classe `Future` permettra à la boucle d'avoir accès à la *future* courante.
+C'est le seul moyen pour la boucle d'y avoir accès, puisqu'elle ne possède sinon qu'une référence vers la tâche asynchrone englobante.
+
+--------------------
 
 * Point sur les futures: traiter le résultat d'un asyncio.sleep
 * Réécriture de la boucle événementielle avec futures & events
