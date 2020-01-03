@@ -94,33 +94,63 @@ En Python 3.6 la syntaxe `async for` devient aussi utilisable dans les listes / 
 
 ## Gestionnaires de contexte asynchrones
 
-Procédé identique pour les contextes : les classiques méthodes `__enter__` et `__exit__` deviennent `__aenter__` et `__aexit__` dans la version asynchrone, utilisable depuis une coroutine avec un `async with`.
+Un gestionnaire de contexte est défini par ses méthodes `__enter__` et `__exit__` permettant d'exécuter du code en entrée et en sortie de bloc `with` (voir [ici](https://zestedesavoir.com/tutoriels/954/notions-de-python-avancees/3-further/2-context-managers/)).
+
+Le gestionnaire de contexte asynchrone est défini sur le même modèle, avec des coroutines `__aenter__` et `__aexit__`.
+Elles sont donc exécutées respectivement à l'entrée et à la sortie du bloc `async with`, utilisé dans une coroutine.
+
+Par exemple, voici un gestionnaire de contexte permettant de créer un serveur autour de l'objet `aiosocket` que nous avons utilisé au chapitre 3.
+La coroutine `__aenter__` se charge de démarrer le serveur (*bind* et *listen*), et `__aexit__` le clôt (*close*).
 
 ```python
-class SQL:
-    def __init__(self, conn):
-        self.conn = conn
+class Server:
+    def __init__(self, addr):
+        self.socket = aiosocket()
+        self.addr = addr
 
     async def __aenter__(self):
-        await self.conn.connect()
-        return self.conn
+        await self.socket.bind(self.addr)
+        await self.socket.listen()
+        return self.socket
 
     async def __aexit__(self, *args):
-        await self.conn.close()
+        self.socket.close()
 ```
+
+Encore une fois, nous définissons une coroutine pour pouvoir tester notre objet.
+On reprend le même principe que précédemment d'un serveur qui renvoie juste l'inverse du message reçu.
+Et l'on réutilise `client_coro` pour jouer le rôle du client.
+
+```python
+>>> async def test_with():
+...     async with Server(('localhost', 8080)) as server:
+...         with await server.accept() as client:
+...             msg = await client.recv(1024)
+...             print('Received from client', msg)
+...             await client.send(msg[::-1])
+...
+>>> loop = Loop()
+>>> loop.run_task(gather(test_with(), client_coro()))
+Received from client b'Hello World!'
+Received from server b'!dlroW olleH'
+```
+
+Cette fois-ci c'est Python 3.7 qui est venu simplifié les choses, en ajoutant le support des gestionnaires de contexte asynchrones à la `contextlib`.
+Ainsi, il devient possible d'utiliser un décorateur `asynccontextmanager` pour transformer un générateur asynchrone en gestionnaire de contexte asynchrone.
+L'instruction `yield` permet de séparer le code d'initialisation de celui de fermeture du bloc `async with`.
 
 ```python
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
-async def sql():
+async def server(addr):
+    socket = aiosocket()
     try:
-        print('Connecting...')
-        await sleep(1)
-        yield
+        await socket.bind(addr)
+        await socket.listen()
+        yield socket
     finally:
-        print('Closing')
-        await sleep(1)
+        socket.close()
 ```
 
-<https://www.python.org/dev/peps/pep-0492/>
+`server` s'utilise de la même manière que la classe `Server` précédente.
