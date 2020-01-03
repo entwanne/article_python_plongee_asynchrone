@@ -27,8 +27,8 @@ manifest = {
 trans = str.maketrans('','','#*_`\n')
 
 def reduce_title_level(line):
-    if line.startswith('###'):
-        return line[2:]
+    if line.startswith('##'):
+        return line[1:]
     return line
 
 with ZipFile(archive_name, 'w') as archive:
