@@ -1,5 +1,7 @@
 # No Future
 
+## Mécanisme des *futures*
+
 Le moteur asynchrone du chapitre précédent est assez peu efficace, notamment sa fonction `sleep`.
 En effet : la tâche est bien interrompue le temps de l'attente, mais elle est reprogrammée par la boucle à chaque itération, pour rien.
 De même pour la tâche `Waiter` qui n'a normalement pas besoin d'être programmée tant que son compteur ne vaut pas zéro.
@@ -31,8 +33,6 @@ Lorsque, depuis une coroutine, on fera un `await Future()`, la valeur passée au
 Ainsi, un `yield self` depuis la classe `Future` permettra à la boucle d'avoir accès à la *future* courante.
 C'est le seul moyen pour la boucle d'y avoir accès, puisqu'elle ne possède sinon qu'une référence vers la tâche asynchrone englobante.
 
---------------------
-
 Pour améliorer notre classe `Future`, on va l'agrémenter d'une méthode `set` afin de signaler que le traitement est terminé.
 En plus de cela, la méthode se chargera aussi de reprogrammer notre tâche au niveau de la boucle événementielle (c'est à dire de l'ajouter à nouveau aux tâches à exécuter, afin qu'elle soit prise en compte à l'itération suivante).
 
@@ -53,6 +53,8 @@ class Future:
         if self.task is not None:
             Loop.current.add_task(self.task)
 ```
+
+## Intégration à la boucle événementielle
 
 Notre tâche `Future` est maintenant complète, mais le reste du travail est à appliquer du côté de la boucle, pour qu'elle les traite correctement.
 
@@ -80,6 +82,8 @@ class Loop:
             else:
                 self.tasks.append(task)
 ```
+
+## Événements temporels
 
 Pour le troisième point, on va formaliser l'idée d'événements.
 Les plus simples à mettre en place sont les événements temporels, et ce sont donc les seuls que nous allons traiter ici.
@@ -154,7 +158,7 @@ class Loop:
                 self.tasks.append(task)
 ```
 
---------------------
+## Utilisation des *futures*
 
 Notre bouclé gérant correctement les événements temporels, on peut maintenant réécrire `sleep` avec une *future* et un *time-handler*.
 Tout ce qu'a à faire `sleep` c'est convertir une durée en temps absolu, instancier une *future* et l'ajouter à la boucle en appelant `call_later`.

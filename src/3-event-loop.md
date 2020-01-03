@@ -1,5 +1,7 @@
 # Boucle d'or et les trois tâches
 
+## Une première boucle événementielle
+
 Après avoir défini différentes tâches aysnchrones, il serait intéressant de construire le moteur pour les exécuter, la boucle événementielle.
 Cette boucle se charge de cadencer et d'avancer dans les tâches, tout en tenant compte des événements qui peuvent survenir.
 
@@ -75,6 +77,8 @@ start
 finished
 ```
 
+## Construire un environnement asynchrone
+
 Cependant, un moteur asynchrone n'est rien sans les utilitaires qui vont avec.
 Nous avons vu la fonction `sleep` pour *asyncio* qui permet de patienter un certain nombre de secondes, et il serait utile d'en avoir un équivalent dans notre environnement.
 
@@ -138,7 +142,7 @@ baz
 
 (Le résultat n'est pas très parlant ici vu qu'il manque de dynamisme, je vous invite à l'exécuter chez vous pour mieux vous en rendre compte.)
 
---------------------
+## Interagir avec la boucle
 
 La « boucle » que nous utilisons pour le moment ne permet aucune interaction : une fois lancée, il n'est par exemple plus possible d'ajouter de nouvelles tâches. Ça limite beaucoup les cas d'utilisation.
 
@@ -205,7 +209,7 @@ class Loop:
 Dans un environnement réel, il nous faudrait réinitialiser `current` à chaque tour de boucle dans le `run`, pour permettre à plusieurs boucles de coexister.
 Mais le code proposé ici ne l'est qu'à titre d'exemple, on notera aussi que le traitement n'est pas *thread-safe*.
 
---------------------
+## D'autres utilitaires asynchrones
 
 Cet attribut `Loop.current` va nous être d'une grande utilité pour réaliser notre propre coroutine `gather`.
 Pour rappel, cet outil permet de lancer plusieurs coroutines « simultanément » et d'attendre qu'elles soient toutes terminées.
@@ -284,7 +288,7 @@ f
 g
 ```
 
---------------------
+## Utilitaires réseau (*sockets*)
 
 Oublions ce `print_messages` et venons-en à des cas d'utilisation plus concrets.
 Les environnements asynchrones sont particulièrement adaptés aux programmes qui réalisent beaucoup d'opérations d'entrée/sortie (*I/O*), tels que des applications réseau.

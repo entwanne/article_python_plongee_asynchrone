@@ -1,5 +1,7 @@
 # Attendez-moi !
 
+## À la découverte des tâches asynchrones
+
 Les coroutines ne sont pas les seuls objets qui peuvent s'utiliser derrière le mot-clé `await`.
 Plus généralement on parle de tâches asynchrones (ou *awaitables*) pour qualifier ces objets.
 
@@ -41,7 +43,7 @@ Traceback (most recent call last):
 StopIteration
 ```
 
---------------------
+## Synchronisation entre tâches
 
 En pratique, il est assez peu fréquent d'avoir besoin de définir un *awaitable* autre qu'une coroutine.
 C'est néanmoins utile si l'on souhaite conserver un état associé à notre tâche, pour pouvoir interagir avec elle depuis l'extérieur en altérant cet état.
