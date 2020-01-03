@@ -1,22 +1,32 @@
-# Quelques autres outils
+# Et pour quelques outils de plus
 
-Depuis les dernières versions de Python se sont développés de nouveaux outils autour de ces tâches asynchrone, afin de pouvoir profiter d'un environnement complet.
+`async def` et `await` ne sont pas les seuls mot-clés introduits par la version 3.5 de Python.
+Deux nouveaux blocs ont aussi été ajoutés : les boucles asynchrones (`async for`) et les gestionnaires de contexte asynchrones (`async with`).
 
-Il s'agit en fait d'ajouter un mode asynchrone à deux outils existants : la boucle `for` et le bloc `with`.
-De la même manière qu'on passe de `def` à `async def` pour une fonction asynchrone (coroutine), les mot-clés `async for` et `async with` ont été introduits.
+Ils sont similaires à leurs équivalents synchrones mais utilisent des méthodes spéciales qui font appel à des coroutines.
+Et ils ne sont utilisables qu'au sein de coroutines (de la même manière qu'`await`).
+
+Aussi, Python n'a pas arrêté d'évoluer après cette version 3.5, et de nouveaux outils pour la programmation asynchrones sont venus s'y ajouter depuis.
 
 ## Itérables & générateurs asynchrones
 
-Depuis une coroutine, il est donc maintenant possible d'utiliser un `async for` pour boucler sur un itérable asynchrone.
+### Itérables asynchrones
 
-Mais qu'est-ce donc qu'un itérable asychrone ?
-C'est un itérable qui produit ces éléments asynchrones.
+Pour rappel, un itérable est un objet possédant une méthode `__iter__` renvoyant un itérateur.
+Et un itérateur est un objet possédant une méthode `__next__` qui renvoie le prochain élément à chaque appel.
+Plus d'informations à ce sujet [ici](https://zestedesavoir.com/tutoriels/954/notions-de-python-avancees/1-starters/2-iterables/).
 
-Un itérable en Python est défini par une méthode `__iter__` renvoyant un itérateur, lui-même défini par une méthode `__next__` renvoyant le prochain élément (ou levant une exception `StopIteration` s'il est entièrement consommé).
-De façon similaire, un itérable asynchrone possède une méthode `__aiter__` renvoyant un itérateur asynchrone doté d'une méthode-coroutine `__anext__` renvoyant l'élément suivant (ou levant une exception `StopAsyncIteration`).
-Le fait que cette dernière méthode soit une coroutine lui permet d'utiliser tous les outils asynchrones.
+Sur ce même modèle, un itérable asynchrone est un objet doté d'une méthode `__aiter__` qui renvoie un itérateur asynchrone (`__aiter__` est une méthode synchrone).  
+Et un itérateur asynchrone possède une méthode-coroutine `__anext__`, renvoyant le prochain élément et pouvant user de tous les outils asynchrones.
 
-Le code suivant définit un itérable asynchrone `ARange` et son itérateur associé.
+Un itérateur synchrone se termine quand sa méthode `__next__` lève une exception `StopIteration`.
+Dans le cas des itérateurs asynchrones, c'est une exception `AsyncStopIteration` qui sera levée.
+
+La boucle `async for` parcourant l'itérateur sera suspendue pendant les attentes (rendant la main à la boucle événementielle).
+
+Le code qui suit présente la classe `ARange`, un itérable asynchrone qui produit des nombres à la manière de `range`, mais en se synchronisant sur un événement extérieur (ici un `sleep(1)`).
+`ARange` représente l'itérable et `ArangeIterator` l'itérateur associé (qui n'a jamais besoin d'être utilisé directement).
+`ARange` en elle-même n'a rien d'asynchrone, tout le code asynchrone se trouve dans la classe de l'itérateur.
 
 ```python
 class ARange:
@@ -41,6 +51,8 @@ class ARangeIterator:
         return i
 ```
 
+Pour tester l'itérable dans notre environnement, définissons une simple coroutine utilisant un `async for` :
+
 ```python
 >>> async def test_for():
 ...     async for val in ARange(5):
@@ -55,7 +67,10 @@ class ARangeIterator:
 4
 ```
 
-Python 3.6 a aussi apporté les générateurs asynchrones pour simplifier l'écriture de tels itérables/itérateurs, en associant les mots-clés `async def` et `yield`.
+### Générateurs asynchrones
+
+Les choses se simplifient en Python 3.6 où il devient possible de définir des générateurs asynchrones.
+Il suffit d'un `yield` utilisé dans une coroutine pour la transformer en fonction génératrice asynchrone.
 
 ```python
 async def arange(stop):
@@ -64,9 +79,18 @@ async def arange(stop):
         yield i
 ```
 
-L'objet renvoyé par `arange` est un itérateur asynchrone et s'utilise donc de la même façon que les objets `ARange`.
+`arange` s'utilise exactement de la même manière que la classe `ARange` précédente (remplacez `ARange(5)` par `arange(5)` dans l'exemple plus haut pour le vérifier), mais avec un code bien plus court.
 
-\+ listes en intension + `async` ?
+En Python 3.6 la syntaxe `async for` devient aussi utilisable dans les listes / générateurs / ensembles / dictionnaires en intension, toujours depuis une coroutine.
+
+```python
+>>> async def test_for():
+...     print([x async for x in arange(5)])
+...
+>>> loop = Loop()
+>>> loop.run_task(test_for())
+[0, 1, 2, 3, 4]
+```
 
 ## Gestionnaires de contexte asynchrones
 
