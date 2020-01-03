@@ -33,6 +33,129 @@ C'est le seul moyen pour la boucle d'y avoir accès, puisqu'elle ne possède sin
 
 --------------------
 
+Pour améliorer notre classe `Future`, on va l'agrémenter d'une méthode `set` afin de signaler que le traitement est terminé.
+En plus de cela, la méthode se chargera aussi de reprogrammer notre tâche au niveau de la boucle événementielle (c'est à dire de l'ajouter à nouveau aux tâches à exécuter, afin qu'elle soit prise en compte à l'itération suivante).
+
+Pour connaître la tâche à cadencer, on va utiliser l'attribut `task` de l'objet `Future`. Il n'existe pas encore pour le moment, mais sa valeur lui sera attribuée par la boucle événementielle lorsque la tâche sera interrompue.
+
+```python
+class Future:
+    def __init__(self):
+        self._done = False
+        self.task = None
+
+    def __await__(self):
+        yield self
+        assert self._done
+
+    def set(self):
+        self._done = True
+        if self.task is not None:
+            Loop.current.add_task(self.task)
+```
+
+Notre tâche `Future` est maintenant complète, mais le reste du travail est à appliquer du côté de la boucle, pour qu'elle les traite correctement.
+
+* Premièrement, il faut que quand une tâche s'interrompt sur une *future*, la boucle définisse l'attribut `task` de la *future* comme convenu.
+* Ensuite, la boucle ne doit pas reprogrammer une telle tâche, puisque ça provoquerait un doublon lorsque la *future* serait notifiée.
+* Enfin, il est nécessaire de lier les *futures* à des événements, pour que l'appel à `set` et donc le déclenchement de la tâche soient automatiques.
+
+On commence par les deux premiers points, faciles à ajouter à la méthode `run` de `Loop`.
+
+```python
+class Loop:
+    [...]
+
+    def run(self):
+        Loop.current = self
+        while self.tasks:
+            task = self.tasks.pop(0)
+            try:
+                result = next(task)
+            except StopIteration:
+                continue
+
+            if isinstance(result, Future):
+                result.task = task
+            else:
+                self.tasks.append(task)
+```
+
+Pour le troisième point, on va formaliser l'idée d'événements.
+Les plus simples à mettre en place sont les événements temporels, et ce sont donc les seuls que nous allons traiter ici.
+En effet, la boucle a conscience du temps qui s'écoule et peut déclencher des actions en fonction de ça.
+Le but sera donc d'associer un temps à une *future*, et d'y faire appel dans la boucle.
+
+Tout d'abord, on crée une classe `TimeEvent` associant ces deux éléments.
+On rend les objets de cette classe ordonnables, en implémentant les méthodes spéciales `__eq__` (opérateur `==`) et `__lt__` (opérateur `>`) puis en appliquant le décorateur `functools.total_ordering` pour générer les méthodes des autres opérateurs.  
+On a besoin que les objets soient ordonnables pour trouver facilement les prochains événements à déclencher.
+
+```python
+from functools import total_ordering
+
+@total_ordering
+class TimeEvent:
+    def __init__(self, t, future):
+        self.t = t
+        self.future = future
+
+    def __eq__(self, rhs):
+        return self.t == rhs.t
+
+    def __lt__(self, rhs):
+        return self.t < rhs
+```
+
+On intègre les événements temporels à notre boucle en la dotant d'une méthode `call_later`.
+Cette méthode reçoit un temps et une *future*, les associe dans un objet `TimeEvent` qu'elle ajoute à la file des événements.
+On utilise pour la file un objet `heapq` qui permet de conserver un ensemble ordonné : le premier événement de la file sera toujours le prochain à exécuter.
+
+`heapq` est un module fournissant des fonctions (`heappush`, `heappop`) qui s'appuient sur une liste pour garder une file cohérente.
+
+```python
+import heapq
+
+class Loop:
+    [...]
+
+    handlers = []
+
+    def call_later(self, t, future):
+        heapq.heappush(self.handlers, TimeEvent(t, future))
+```
+
+Dans le cœur de la boucle (méthode `run`), il suffit alors de regarder l'événement en tête de file, et de le déclencher si besoin (si son temps est atteint).
+Déclencher l'événement signifie notifier la *future* qui lui est associée (appeler sa méthode `set`).
+L'effet sera donc immédia, la *future* ajoutera la tâche suspendue aux tâches courantes, et celle-ci sera prise en compte par la boucle pendant l'itération.
+Le reste de la méthode `run` reste inchangé.
+
+```python
+class Loop:
+    [...]
+
+    def run(self):
+        Loop.current = self
+        while self.tasks or self.handlers:
+            if self.handlers and self.handlers[0].t <= time.time():
+                handler = heapq.heappop(self.handlers)
+                handler.future.set()
+
+            if not self.tasks:
+                continue
+            task = self.tasks.pop(0)
+            try:
+                result = next(task)
+            except StopIteration:
+                continue
+
+            if isinstance(result, Future):
+                result.task = task
+            else:
+                self.tasks.append(task)
+```
+
+--------------------
+
 * Point sur les futures: traiter le résultat d'un asyncio.sleep
 * Réécriture de la boucle événementielle avec futures & events
 
