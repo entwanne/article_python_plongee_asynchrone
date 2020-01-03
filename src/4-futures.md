@@ -107,7 +107,7 @@ class TimeEvent:
 ```
 
 On intègre les événements temporels à notre boucle en la dotant d'une méthode `call_later`.
-Cette méthode reçoit un temps et une *future*, les associe dans un objet `TimeEvent` qu'elle ajoute à la file des événements.
+Cette méthode reçoit un temps (absolu) et une *future*, les associe dans un objet `TimeEvent` qu'elle ajoute à la file des événements.
 On utilise pour la file un objet `heapq` qui permet de conserver un ensemble ordonné : le premier événement de la file sera toujours le prochain à exécuter.
 
 `heapq` est un module fournissant des fonctions (`heappush`, `heappop`) qui s'appuient sur une liste pour garder une file cohérente.
@@ -156,98 +156,37 @@ class Loop:
 
 --------------------
 
-* Point sur les futures: traiter le résultat d'un asyncio.sleep
-* Réécriture de la boucle événementielle avec futures & events
-
-Notre implémentation actuelle du `sleep` est assez inefficace : la coroutine est appelée à chaque itération alors que le temps n'est pas écoulé.
-Il en est de même pour la tâche `Waiter` qui n'a normalement pas besoin d'être programmée tant que son compteur n'est pas terminé.
-
-C'est là qu'interviennent les _futures_, permettant à la boucle de programmer les tâches quand des conditions sont atteintes.
+Notre bouclé gérant correctement les événements temporels, on peut maintenant réécrire `sleep` avec une *future* et un *time-handler*.
+Tout ce qu'a à faire `sleep` c'est convertir une durée en temps absolu, instancier une *future* et l'ajouter à la boucle en appelant `call_later`.
 
 ```python
->>> async def test():
-...     await asyncio.sleep(1)
+import time
+
+async def sleep(t):
+    future = Future()
+    Loop.current.call_later(time.time() + t, future)
+    await future
+```
+
+Il suffit qu'une coroutine exécute `await sleep(...)` pour que tout le mécanisme se mette en place :
+
+* Une *future* est instanciée, un événement temporel lui est associé dans la boucle, réglé sur la durée demandée.
+* La coroutine est retirée de la liste des tâches à traiter.
+* La boucle continue son travail, en itérant sur les autres tâches, jusqu'à ce que l'événement temporel se produise.
+* Là, elle déclenche la notification de la *future*, la coroutine est donc réajoutée à la liste des tâches.
+* La boucle reprend alors l'exécution de la coroutine précédemment suspendue.
+
+```python
+>>> async def foo():
+...     print('before')
+...     await sleep(5)
+...     print('after')
 ...
 >>> loop = Loop()
->>> loop.run_task(test())
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "defs.py", line 116, in run_task
-    self.run()
-  File "defs.py", line 108, in run
-    next(task)
-  File "<stdin>", line 2, in test
-  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
-    return await future
-RuntimeError: await wasn't used with future
+>>> loop.run_task(foo())
+before
+after
 ```
 
-Le `yield` utilisé dans les _awaitables_ peut renvoyer une valeur (plutôt que `None`) qui pourra être utilisée par la boucle.
-
-```python
-class Future:
-    def __await__(self):
-        yield self
-        assert self.done
-```
-
-La tâche s'arrêtant sur une future sera mise en pause par la boucle et réactivée seulement quand la condition de la future aura été remplie (l'assertion est là pour s'en assurer).
-La future est un _awaitable_, ce qui lui permet d'être utilisée de façon transparente depuis les autres tâches.
-
-\+ mécanisme de la boucle pour ne reprendre la coroutine ayant lancé le future que quand sa condition est remplie (programme la tâche lorsque le résultat est setté)
-exemple d'une gestion d'événements temporels qui déclenchent des futures (sleep)
-(liste ordonnée des futures temporelles et activation de la première antérieure au temps présent)
-
-\+ call_later ?
-
-```python
-class Future:
-    def __init__(self):
-        self._done = False
-        self.task = None
-
-    def __await__(self):
-        yield self
-        assert self._done
-
-    def set(self):
-        self._done = True
-        if self.task is not None:
-            Loop.current.add_task(self.task)
-```
-
-```python
-class Loop:
-    ...
-
-    def run(self):
-        ...
-        if isinstance(result, Future):
-            result.task = task
-        else:
-            self.tasks.append(task)
-```
-
-```python
-@total_ordering
-class TimeEvent:
-    def __init__(self, t, future):
-        self.t = t
-        self.future = future
-    def __eq__(self, rhs):
-        return self.t == rhs.t
-    def __lt__(self, rhs):
-        return self.t < rhs
-
-class Loop:
-    ...
-    def call_later(self, t, future):
-        heapq.push(self.handlers, TimeEvent(t, future))
-
-    def run(self):
-        ...
-        if self.handlers and self.handlers[0].t <= time.time():
-            handler = heapq.pop(self.handlers)
-            handler.future.set()
-        ...
-```
+Notre boucle possède encore bien des défauts, comme celui de faire de l'attente active (bloquer le processeur) quand il n'y a rien à exécuter.
+L'implémentation d'`asyncio` est bien sûr plus évoluée que ce qui est présenté ici.
