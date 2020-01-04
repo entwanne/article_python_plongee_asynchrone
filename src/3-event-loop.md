@@ -32,7 +32,7 @@ Hello
 World
 ```
 
-Mais il est assez limité, ne traitant pas du tout la question de l'exécution concurrente, du cadencement.
+Mais il est assez limité, ne traitant pas du tout la question de l'exécution concurrente ou du cadencement.
 Pour l'améliorer, nous créons donc la fonction `run_tasks`, recevant une liste de tâches.
 Les itérateurs de ces tâches seront placés dans une file (*FIFO*) par la boucle, qui pourra alors à chaque itération récupérer la prochaine tâche à traiter et la faire avancer d'un pas.
 Après quoi, si la tâche n'est pas terminée, elle sera ajoutée en fin de file pour être continuée plus tard.
@@ -99,7 +99,7 @@ class interrupt:
 ```
 
 La tâche est peu utile en elle-même, mais elle permet de construire autour d'elle un environnement de coroutines.
-Par exemple, on peut imaginer une coroutine qui rendrait la main à la boucle (et donc patienterait) tant qu'un temps n'a pas été atteint.
+Par exemple, on peut imaginer une coroutine qui rendrait la main à la boucle (et donc patienterait) tant qu'un temps (absolu) n'a pas été atteint.
 
 ```python
 import time
@@ -299,7 +299,7 @@ Le principe est alors, pour chaque opération, de vérifier si la *socket* est p
 À ce moment-là, la boucle événementielle reprend la main et peut continuer ses autres opérations pour ne pas les bloquer.
 
 On construit une classe `AIOSocket`, reprenant l'interface de `socket`.
-Notre classe sera appelée avec une `socket` déjà instanciée, il ne reste alors plus qu'à instancier les sélecteurs pour l'écouter en lecture et en écriture.
+Notre classe sera appelée avec une *socket* déjà instanciée, il ne reste alors plus qu'à instancier les sélecteurs pour la surveiller en lecture et en écriture.
 Nous ajoutons les méthodes `close` et `fileno` pour respecter l'interface, ainsi que le protocole des gestionnaires de contexte.
 
 ```python
@@ -350,7 +350,7 @@ class AIOSocket:
 
 Toujours sur ce modèle, on ajoute ensuite les coroutines de lecture/écriture.
 On notera juste que la méthode `accept` d'une *socket* renvoie un couple *(socket, adresse)*.
-Nous ignorons ici l'adresse et emballons la *socket* dans une instance `IOSocket`, afin de renvoyer un objet du même type.
+Nous ignorons ici l'adresse et emballons la *socket* dans une instance `AIOSocket`, afin de renvoyer un objet du même type.
 
 ```python
 class AIOSocket:

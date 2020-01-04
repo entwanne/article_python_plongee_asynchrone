@@ -56,7 +56,6 @@ En inspectant l'objet renvoyé par `simple_print`, on remarque qu'il possède un
 La coroutine serait donc un objet avec une méthode spéciale `__await__`.
 Nous voilà un peu plus avancés, plus qu'à en apprendre davantage sur cette méthode.
 
-Mais aussi que l'appel à cette méthode renvoie un itérateur.
 On voit qu'elle s'appelle sans arguments et qu'elle renvoie un objet de type `coroutine_wrapper`.
 Mais en inspectant à nouveau, on remarque que cet objet est un itérateur !
 
@@ -122,10 +121,10 @@ StopIteration
 ```
 
 Cela apparaît très clairement maintenant, notre boucle réalise deux itérations.
-Chaque interruption permet à la boucle de reprendre la main, de gérer les événements et de cadencer les tâches (choisir de les suspendre ou les continuer), c'est ainsi qu'elle peut en exécuter « simultanément » (de façon concourrente).
+Chaque interruption permet à la boucle de reprendre la main, de gérer les événements et de cadencer les tâches (choisir de les suspendre ou de les continuer), c'est ainsi qu'elle peut en exécuter plusieurs « simultanément » (de façon concourrente).
 
 C'est ici l'expression `await asyncio.sleep(0)` qui est responsable de l'interruption dans notre itération, elle est similaire à un `yield` pour un générateur.
 `await` est l'équivalent du `yield from`, il délégue l'itération à une sous-tâche.
 Il ne provoque pas d'interruption en lui-même, celle-ci ne survient que si elle est déclenchée par la sous-tâche (nous verrons par la suite par quel moyen).
 
-`asyncio.sleep(0)` est un cas particulier de `sleep` qui ne fait qu'une simple interruption, sans attente. Le comportement serait différent avec un temps non nul.
+`asyncio.sleep(0)` est un cas particulier de `sleep` qui ne fait qu'une simple interruption, sans attente. Le comportement serait différent avec une durée non nulle en paramètre.

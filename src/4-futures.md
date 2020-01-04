@@ -9,7 +9,7 @@ De même pour la tâche `Waiter` qui n'a normalement pas besoin d'être programm
 On sait qu'une tâche est suspendue car elle attend qu'une condition (temporelle ou autre) soit vraie.
 il serait alors intéressant que la boucle événementielle ait connaissance de cela et ne cadence que les tâches dont les préconditions sont remplies.
 
-Pour éviter ce problème, `asyncio` utilise un mécanisme de *futures*.
+Pour éviter ce problème, *asyncio* utilise un mécanisme de *futures*.
 Une *future* est une tâche asynchrone spécifique, qui permet d'attendre un résultat qui n'a pas encore été calculé.
 La *future* ne peut être relancée par la boucle événementielle qu'une fois ce résultat obtenu.
 
@@ -31,7 +31,7 @@ On place néanmoins un `assert` pour s'assurer que ce soit bien le cas.
 
 Lorsque, depuis une coroutine, on fera un `await Future()`, la valeur passée au `yield` remontera le flux des appels jusqu'à la boucle événementielle, qui la recevra en valeur de retour de `next`.
 Ainsi, un `yield self` depuis la classe `Future` permettra à la boucle d'avoir accès à la *future* courante.
-C'est le seul moyen pour la boucle d'y avoir accès, puisqu'elle ne possède sinon qu'une référence vers la tâche asynchrone englobante.
+C'est le seul moyen pour la boucle d'en avoir une référence, puisqu'elle ne connaît sinon que la tâche asynchrone englobante.
 
 Pour améliorer notre classe `Future`, on va l'agrémenter d'une méthode `set` afin de signaler que le traitement est terminé.
 En plus de cela, la méthode se chargera aussi de reprogrammer notre tâche au niveau de la boucle événementielle (c'est à dire de l'ajouter à nouveau aux tâches à exécuter, afin qu'elle soit prise en compte à l'itération suivante).
@@ -59,7 +59,7 @@ class Future:
 Notre tâche `Future` est maintenant complète, mais le reste du travail est à appliquer du côté de la boucle, pour qu'elle les traite correctement.
 
 * Premièrement, il faut que quand une tâche s'interrompt sur une *future*, la boucle définisse l'attribut `task` de la *future* comme convenu.
-* Ensuite, la boucle ne doit pas reprogrammer une telle tâche, puisque ça provoquerait un doublon lorsque la *future* serait notifiée.
+* Ensuite, la boucle ne doit pas reprogrammer une telle tâche, puisque ça provoquerait un doublon lorsque la *future* sera notifiée.
 * Enfin, il est nécessaire de lier les *futures* à des événements, pour que l'appel à `set` et donc le déclenchement de la tâche soient automatiques.
 
 On commence par les deux premiers points, faciles à ajouter à la méthode `run` de `Loop`.
@@ -91,7 +91,7 @@ En effet, la boucle a conscience du temps qui s'écoule et peut déclencher des 
 Le but sera donc d'associer un temps à une *future*, et d'y faire appel dans la boucle.
 
 Tout d'abord, on crée une classe `TimeEvent` associant ces deux éléments.
-On rend les objets de cette classe ordonnables, en implémentant les méthodes spéciales `__eq__` (opérateur `==`) et `__lt__` (opérateur `>`) puis en appliquant le décorateur `functools.total_ordering` pour générer les méthodes des autres opérateurs.  
+On rend les objets de cette classe ordonnables, en implémentant les méthodes spéciales `__eq__` (opérateur `==`) et `__lt__` (opérateur `>`) puis en appliquant le décorateur `functools.total_ordering` pour générer les méthodes des autres opérateurs d'ordre.  
 On a besoin que les objets soient ordonnables pour trouver facilement les prochains événements à déclencher.
 
 ```python
@@ -114,7 +114,7 @@ On intègre les événements temporels à notre boucle en la dotant d'une métho
 Cette méthode reçoit un temps (absolu) et une *future*, les associe dans un objet `TimeEvent` qu'elle ajoute à la file des événements.
 On utilise pour la file un objet `heapq` qui permet de conserver un ensemble ordonné : le premier événement de la file sera toujours le prochain à exécuter.
 
-`heapq` est un module fournissant des fonctions (`heappush`, `heappop`) qui s'appuient sur une liste pour garder une file cohérente.
+`heapq` est un module fournissant des fonctions (`heappush`, `heappop`) qui s'appuient sur une liste (`self.handlers` dans le code qui suit) pour garder une file cohérente.
 
 ```python
 import heapq
@@ -122,7 +122,9 @@ import heapq
 class Loop:
     [...]
 
-    handlers = []
+    def __init__(self):
+        self.tasks = []
+        self.handlers = []
 
     def call_later(self, t, future):
         heapq.heappush(self.handlers, TimeEvent(t, future))
@@ -130,7 +132,7 @@ class Loop:
 
 Dans le cœur de la boucle (méthode `run`), il suffit alors de regarder l'événement en tête de file, et de le déclencher si besoin (si son temps est atteint).
 Déclencher l'événement signifie notifier la *future* qui lui est associée (appeler sa méthode `set`).
-L'effet sera donc immédia, la *future* ajoutera la tâche suspendue aux tâches courantes, et celle-ci sera prise en compte par la boucle pendant l'itération.
+L'effet sera donc immédiat, la *future* ajoutera la tâche suspendue aux tâches courantes, et celle-ci sera prise en compte par la boucle pendant l'itération.
 Le reste de la méthode `run` reste inchangé.
 
 ```python
@@ -160,8 +162,8 @@ class Loop:
 
 ## Utilisation des *futures*
 
-Notre bouclé gérant correctement les événements temporels, on peut maintenant réécrire `sleep` avec une *future* et un *time-handler*.
-Tout ce qu'a à faire `sleep` c'est convertir une durée en temps absolu, instancier une *future* et l'ajouter à la boucle en appelant `call_later`.
+Notre boucle gérant correctement les événements temporels, on peut maintenant réécrire `sleep` avec une *future* et un *time-handler*.
+Tout ce qu'a à faire `sleep` c'est de convertir une durée en temps absolu, instancier une *future* et l'ajouter à la boucle en appelant `call_later`.
 
 ```python
 import time

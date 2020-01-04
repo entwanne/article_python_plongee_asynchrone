@@ -1,6 +1,6 @@
 # Et pour quelques outils de plus
 
-`async def` et `await` ne sont pas les seuls mot-clés introduits par la version 3.5 de Python.
+`async def` et `await` ne sont pas les seuls mots-clés introduits par la version 3.5 de Python.
 Deux nouveaux blocs ont aussi été ajoutés : les boucles asynchrones (`async for`) et les gestionnaires de contexte asynchrones (`async with`).
 
 Ils sont similaires à leurs équivalents synchrones mais utilisent des méthodes spéciales qui font appel à des coroutines.
@@ -135,7 +135,7 @@ Received from client b'Hello World!'
 Received from server b'!dlroW olleH'
 ```
 
-Cette fois-ci c'est Python 3.7 qui est venu simplifié les choses, en ajoutant le support des gestionnaires de contexte asynchrones à la `contextlib`.
+Cette fois-ci c'est Python 3.7 qui est venu simplifier les choses, en ajoutant le support des gestionnaires de contexte asynchrones à la `contextlib`.
 Ainsi, il devient possible d'utiliser un décorateur `asynccontextmanager` pour transformer un générateur asynchrone en gestionnaire de contexte asynchrone.
 L'instruction `yield` permet de séparer le code d'initialisation de celui de fermeture du bloc `async with`.
 

@@ -61,26 +61,30 @@ class Waiter:
 ```
 
 Le principe est relativement simple : l'objet est initialisé avec un état booléen `done` à `False`, puis son générateur rend la main continuellement tant que l'état ne vaut pas `True`, forçant la boucle appelante à attendre.
-Une fois cet état passe à `True`, le générateur prend fin et la tâche asynchrone est donc terminée.
+Une fois que cet état passe à `True`, le générateur prend fin et la tâche asynchrone est donc terminée.
 
 On utilise `Waiter` pour synchroniser deux tâches asynchrones.
-En effet, avec un objet `waiter` partagé entre deux tâches, une première peut attendre sur cet objet tandis qu'une seconde exécute un calcul avant de changer l'état du `waiter` (signalant que le calcul est terminé et permettant à la première tâche de continuer).
+En effet, avec un objet *waiter* partagé entre deux tâches, une première peut attendre sur cet objet tandis qu'une seconde exécute un calcul avant de changer l'état du *waiter* (signalant que le calcul est terminé et permettant à la première tâche de continuer).
+
+```python
+async def wait_job(waiter):
+    print('start')
+    await waiter # wait for count_up_to to be finished
+    print('finished')
+
+async def count_up_to(waiter, n):
+    for i in range(n):
+        print(i)
+        await asyncio.sleep(0)
+    waiter.done = True
+```
 
 ```python
 >>> waiter = Waiter()
->>>
->>> async def wait_job(waiter):
-...     print('start')
-...     await waiter # wait for count_up_to to be finished
-...     print('finished')
-...
->>> async def count_up_to(waiter, n):
-...     for i in range(n):
-...         print(i)
-...         await asyncio.sleep(0)
-...     waiter.done = True
-...
->>> loop.run_until_complete(asyncio.gather(wait_job(waiter), count_up_to(waiter, 10)))
+>>> loop.run_until_complete(asyncio.gather(
+...     wait_job(waiter),
+...     count_up_to(waiter, 10),
+... ))
 start
 0
 1
@@ -97,7 +101,7 @@ finished
 ```
 
 `Waiter` permet donc ici à `wait_job` d'attendre la fin de l'exécution de `count_up_to` avant de continuer.
-Il est possible de faire varier le temps de `sleep` pour constater qu'il ne s'agit pas d'un hasard : la première tâche se met en pause tant que la seconde n'a pas terminé son traitement.
+Il est possible de faire varier le temps de *sleep* pour constater qu'il ne s'agit pas d'un hasard : la première tâche se met en pause tant que la seconde n'a pas terminé son traitement.
 
 `gather` est un utilitaire d'*asyncio* servant à exécuter « simultanément » (en concurrence) plusieurs tâches asynchrones dans la boucle événementielle.
 La fonction renvoie la liste des résultats des sous-tâches (le `[None, None]` que l'on voit dans la fin de l'exemple, nos tâches ne renvoyant rien).
