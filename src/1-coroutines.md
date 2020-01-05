@@ -35,6 +35,7 @@ Si l'on omet les opérations de finalisation qu'ajoute `asyncio.run`, le code pr
 
 ```python
 >>> loop = asyncio.new_event_loop()
+>>> asyncio.set_event_loop(loop)
 >>> loop.run_until_complete(simple_print('Hello'))
 Hello
 ```
