@@ -17,7 +17,7 @@ manifest = {
     'slug': 'plongee-au-coeur-de-lasynchrone-en-python',
     'title': "Plongée au cœur de l'asynchrone en Python",
     'version': 2.1,
-    'description': '',
+    'description': 'Sans boire la tasse',
     'type': 'ARTICLE',
     'licence': 'CC BY-SA',
     'ready_to_publish': True,
