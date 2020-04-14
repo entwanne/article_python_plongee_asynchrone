@@ -20,7 +20,7 @@ class ComplexWork:
 ```
 
 Avec le mot-clé `yield`, notre méthode `__await__` devient une fonction génératrice et renvoie donc un itérateur.
-On utilise `yield` sans paramètre, notre boucle événementielle ne s'occupant pas des valeurs renvoyées lors de l'itération, seule l'exécution importe.
+On utilise `yield` sans paramètre, les valeurs renvoyées lors de l'itération ne nous intéressent pas pour l'instant, seule l'exécution importe.
 
 Nous pouvons exécuter notre tâche asynchrone dans une boucle évenementielle *asyncio* :
 
@@ -60,8 +60,10 @@ class Waiter:
             yield
 ```
 
-Le principe est relativement simple : l'objet est initialisé avec un état booléen `done` à `False`, puis son générateur rend la main continuellement tant que l'état ne vaut pas `True`, forçant la boucle appelante à attendre.
+Le principe est relativement simple : l'objet est initialisé avec un état booléen `done` à `False` et son générateur (`__await__`) s'interrompt continuellement tant que l'état ne vaut pas `True`.
+Cela bloque la tâche asynchrone appelante puisque la boucle événementielle itérera sur un générateur infini en attendant son changement d'état.  
 Une fois que cet état passe à `True`, le générateur prend fin et la tâche asynchrone est donc terminée.
+Ça permet alors à la boucle événementielle de reprendre l'exécution à la suite de cette tâche.
 
 On utilise `Waiter` pour synchroniser deux tâches asynchrones.
 En effet, avec un objet *waiter* partagé entre deux tâches, une première peut attendre sur cet objet tandis qu'une seconde exécute un calcul avant de changer l'état du *waiter* (signalant que le calcul est terminé et permettant à la première tâche de continuer).

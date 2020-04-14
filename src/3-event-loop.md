@@ -5,7 +5,10 @@
 Après avoir défini différentes tâches aysnchrones, il serait intéressant de construire le moteur pour les exécuter, la boucle événementielle.
 Cette boucle se charge de cadencer et d'avancer dans les tâches, tout en tenant compte des événements qui peuvent survenir.
 
-Nous avons déjà un algorithme basique, que nous suivons pour le moment manuellement,  pour traiter une tâche :
+Nous nous appuyions jusque là sur la boucle fournie par *asyncio* (`asyncio.run`, `new_event_loop`) et sur son environnement (`sleep`, `gather`),
+mais il va nous être nécessaire de nous en détacher pour bien comprendre comment s'agencent les tâches, et donc de recoder ces outils.
+
+Nous avons déjà un algorithme basique de boucle événementielle, que nous suivons pour le moment manuellement, pour traiter une tâche :
 
 * Faire appel à `__await__` pour récupérer l'itérateur associé.
 * Appeler continuellement `next` sur cet itérateur.
