@@ -4,11 +4,11 @@ _Sans boire la tasse._
 
 ## Lecture
 
-Le tutoriel est publié sur Zeste de Savoir à l'adresse suivante : XXX
+Le tutoriel est publié sur Zeste de Savoir à l'adresse suivante : <https://zestedesavoir.com/articles/3306/plongee-au-coeur-de-lasynchrone-en-python/>.
 
 Ou directement consultable depuis Github en parcourant le dossier [`src/`](src/).
 
-Présentation associée au cours : https://github.com/entwanne/presentation_python_plongee_asynchrone
+Présentation associée au cours : <https://github.com/entwanne/presentation_python_plongee_asynchrone>.
 
 ## Compilation
 
