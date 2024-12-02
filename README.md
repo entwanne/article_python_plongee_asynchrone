@@ -18,3 +18,7 @@ Le *Makefile* présente des règles de compilation vers deux formats :
 * Archive *ZIP* *Zeste de savoir* : `make plongee_asynchrone.zip` (nécessite *python*).
 
 ![Logo](logo_article.png)
+
+## Licence
+
+Article sous licence [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/deed.fr).
